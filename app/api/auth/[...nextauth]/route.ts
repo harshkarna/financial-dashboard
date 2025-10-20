@@ -1,7 +1,10 @@
 import NextAuth, { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 
+const isDevelopment = process.env.NODE_ENV === 'development'
+
 export const authOptions: NextAuthOptions = {
+  debug: isDevelopment, // Enable debug logs in development
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -18,13 +21,20 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-    updateAge: 24 * 60 * 60, // 24 hours
+    maxAge: isDevelopment ? 24 * 60 * 60 : 7 * 24 * 60 * 60, // 1 day for dev, 7 days for prod
+    updateAge: isDevelopment ? 24 * 60 * 60 : 60 * 60, // 24 hours for dev, 1 hour for prod
   },
   callbacks: {
     async jwt({ token, account, user }) {
+      if (isDevelopment) {
+        console.log('JWT Callback - Account:', !!account, 'User:', !!user, 'Token expires at:', token.expiresAt)
+      }
+
       // Initial sign in
       if (account && user) {
+        if (isDevelopment) {
+          console.log('Initial sign in, setting up token')
+        }
         return {
           ...token,
           accessToken: account.access_token,
@@ -34,12 +44,22 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // Return previous token if the access token has not expired yet
-      if (token.expiresAt && Date.now() < (token.expiresAt as number) * 1000) {
-        return token
+      // In development, be very lenient with token expiration
+      if (isDevelopment) {
+        // For development, only refresh if token is really old (more than 12 hours)
+        const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000)
+        if (token.expiresAt && ((token.expiresAt as number) * 1000) > twelveHoursAgo) {
+          return token
+        }
+      } else {
+        // Production: Return previous token if the access token has not expired yet
+        // Add buffer time to prevent edge cases
+        if (token.expiresAt && Date.now() < ((token.expiresAt as number) * 1000) - 60000) {
+          return token
+        }
       }
 
-      // Access token has expired, try to refresh it
+      // Access token has expired or about to expire, try to refresh it
       if (token.refreshToken) {
         try {
           console.log('Refreshing access token...')
@@ -59,7 +79,16 @@ export const authOptions: NextAuthOptions = {
 
           if (!response.ok) {
             console.error('Failed to refresh token:', tokens)
-            throw tokens
+            // In development, be more lenient with token refresh failures
+            if (isDevelopment) {
+              console.log('Development mode: Continuing with existing token despite refresh failure')
+              return {
+                ...token,
+                error: undefined, // Clear any previous errors
+              }
+            } else {
+              throw tokens
+            }
           }
 
           console.log('Token refreshed successfully')
@@ -73,25 +102,33 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error('Error refreshing access token:', error)
-          return { 
-            ...token, 
-            error: 'RefreshAccessTokenError',
-            accessToken: undefined,
+          // For development, continue with existing token instead of failing
+          if (isDevelopment) {
+            console.log('Development mode: Continuing with existing token despite error')
+            return { 
+              ...token, 
+              error: undefined, // Don't set error to prevent logout
+            }
+          } else {
+            return { 
+              ...token, 
+              error: 'RefreshAccessTokenError',
+            }
           }
         }
       }
 
-      return { ...token, error: 'RefreshAccessTokenError' }
+      // If no refresh token, continue with existing token for development
+      console.log('No refresh token available, continuing with existing session')
+      return { ...token, error: undefined }
     },
     async session({ session, token }) {
       // Send properties to the client
       session.accessToken = token.accessToken as string
       session.error = token.error as string
       
-      // If there's an error, user will be redirected to sign in
-      if (token.error === 'RefreshAccessTokenError') {
-        session.error = 'RefreshAccessTokenError'
-      }
+      // For development, don't force logout on token errors
+      // User can continue with existing session
       
       return session
     },

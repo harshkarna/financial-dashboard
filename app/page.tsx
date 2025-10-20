@@ -21,7 +21,11 @@ export default function Home() {
     )
   }
 
-  if (!session) {
+  // Handle authentication errors gracefully for development
+  if (!session || (session as any)?.error === 'RefreshAccessTokenError') {
+    if ((session as any)?.error) {
+      console.log('Authentication error detected, redirecting to login')
+    }
     return <LoginCard onSignIn={() => signIn('google')} />
   }
 
