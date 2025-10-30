@@ -147,6 +147,134 @@ export function MonthlyBudget() {
     return `₹${amount}`
   }
 
+  // Generate creative insights
+  const generateInsights = () => {
+    if (!budgetData) return []
+
+    const insights = []
+    const { summary } = budgetData
+
+    // Top spending category insight
+    if (summary.topCategories && summary.topCategories.length > 0) {
+      const topCategory = summary.topCategories[0]
+      const percentage = ((topCategory.amount / summary.totalExpenses) * 100).toFixed(1)
+      insights.push({
+        icon: '🏆',
+        title: 'Biggest Spender',
+        description: `${topCategory.category} takes the crown with ${formatShortCurrency(topCategory.amount)} (${percentage}% of total expenses)`
+      })
+    }
+
+    // Savings rate insight
+    if (summary.savingsRate) {
+      const emoji = summary.savingsRate > 50 ? '🚀' : summary.savingsRate > 30 ? '💪' : '📈'
+      const comment = summary.savingsRate > 50 ? 'Outstanding!' : summary.savingsRate > 30 ? 'Great job!' : 'Keep improving!'
+      insights.push({
+        icon: emoji,
+        title: 'Savings Champion',
+        description: `You're saving ${summary.savingsRate.toFixed(1)}% of your income. ${comment}`
+      })
+    }
+
+    // Monthly expense trend
+    if (summary.monthlyTrends && summary.monthlyTrends.length > 1) {
+      const lastMonth = summary.monthlyTrends[summary.monthlyTrends.length - 1]
+      const prevMonth = summary.monthlyTrends[summary.monthlyTrends.length - 2]
+      const change = lastMonth.expenses - prevMonth.expenses
+      const emoji = change < 0 ? '📉' : change > 0 ? '📈' : '➡️'
+      const direction = change < 0 ? 'decreased' : change > 0 ? 'increased' : 'stayed same'
+      insights.push({
+        icon: emoji,
+        title: 'Spending Trend',
+        description: `Your expenses ${direction} by ${formatShortCurrency(Math.abs(change))} last month`
+      })
+    }
+
+    // Tax efficiency insight
+    if (summary.taxDeductions && summary.taxDeductions.total > 0) {
+      insights.push({
+        icon: '💰',
+        title: 'Tax Saver',
+        description: `You've optimized ${formatShortCurrency(summary.taxDeductions.total)} in tax deductions this year`
+      })
+    }
+
+    // Category diversity insight
+    if (summary.topCategories) {
+      const categoryCount = summary.topCategories.length
+      const emoji = categoryCount > 8 ? '🌈' : categoryCount > 5 ? '🎯' : '🔍'
+      insights.push({
+        icon: emoji,
+        title: 'Spending Diversity',
+        description: `Your money flows across ${categoryCount} different categories. ${categoryCount > 8 ? 'Very diverse!' : 'Good balance!'}`
+      })
+    }
+
+    // Fun category-specific insights
+    if (summary.topCategories) {
+      const categories = summary.topCategories.map(c => c.category.toLowerCase())
+      
+      // Food insights
+      const foodCategories = categories.filter(cat => 
+        cat.includes('food') || cat.includes('dining') || cat.includes('restaurant')
+      )
+      if (foodCategories.length > 0) {
+        const foodSpending = summary.topCategories
+          .filter(c => foodCategories.includes(c.category.toLowerCase()))
+          .reduce((sum, c) => sum + c.amount, 0)
+        insights.push({
+          icon: '🍕',
+          title: 'Foodie Alert',
+          description: `You've spent ${formatShortCurrency(foodSpending)} on food & dining. That's approximately ${Math.floor(foodSpending / 500)} restaurant meals!`
+        })
+      }
+
+      // Travel insights
+      const travelSpending = summary.topCategories.find(c => 
+        c.category.toLowerCase().includes('travel') || c.category.toLowerCase().includes('transport')
+      )
+      if (travelSpending && travelSpending.amount > 5000) {
+        insights.push({
+          icon: '✈️',
+          title: 'Travel Enthusiast',
+          description: `${formatShortCurrency(travelSpending.amount)} on travel & transport. Adventure awaits!`
+        })
+      }
+
+      // Shopping insights
+      const shoppingSpending = summary.topCategories.find(c => 
+        c.category.toLowerCase().includes('shopping') || c.category.toLowerCase().includes('e-commerce')
+      )
+      if (shoppingSpending && shoppingSpending.amount > 10000) {
+        insights.push({
+          icon: '🛍️',
+          title: 'Shopping Spree',
+          description: `${formatShortCurrency(shoppingSpending.amount)} on shopping. Retail therapy in action!`
+        })
+      }
+    }
+
+    // Income growth insight
+    if (summary.monthlyTrends && summary.monthlyTrends.length > 2) {
+      const recentMonths = summary.monthlyTrends.slice(-3)
+      const avgIncome = recentMonths.reduce((sum, m) => sum + m.income, 0) / recentMonths.length
+      const firstIncome = recentMonths[0].income
+      const lastIncome = recentMonths[recentMonths.length - 1].income
+      
+      if (lastIncome > firstIncome * 1.1) {
+        insights.push({
+          icon: '📈',
+          title: 'Income Growth',
+          description: `Your income is trending upward! ${formatShortCurrency(lastIncome - firstIncome)} increase in recent months`
+        })
+      }
+    }
+
+    return insights.slice(0, 6) // Return top 6 insights
+  }
+
+  const insights = generateInsights()
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
@@ -271,6 +399,42 @@ export function MonthlyBudget() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Smart Insights Section */}
+      {insights.length > 0 && (
+        <Card className="bg-gradient-to-r from-indigo-50 to-cyan-50 dark:from-indigo-900/20 dark:to-cyan-900/20 border-indigo-200 dark:border-indigo-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+              ✨ Smart Insights
+              <span className="text-sm font-normal text-indigo-600 dark:text-indigo-400">
+                AI-powered analysis of your spending patterns
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {insights.map((insight, index) => (
+                <div
+                  key={index}
+                  className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-4 border border-indigo-100 dark:border-indigo-800 hover:shadow-md hover:scale-105 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl flex-shrink-0">{insight.icon}</span>
+                    <div className="min-w-0">
+                      <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
+                        {insight.title}
+                      </h4>
+                      <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed">
+                        {insight.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

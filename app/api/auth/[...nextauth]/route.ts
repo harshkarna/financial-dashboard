@@ -10,10 +10,18 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
+        url: 'https://accounts.google.com/o/oauth2/v2/auth',
         params: {
-          scope: 'openid email profile https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.readonly',
+          scope: [
+            'openid',
+            'email', 
+            'profile',
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive.readonly'
+          ].join(' '),
           access_type: 'offline',
           prompt: 'consent',
+          include_granted_scopes: 'true',
           response_type: 'code',
         }
       }
@@ -34,7 +42,21 @@ export const authOptions: NextAuthOptions = {
       if (account && user) {
         if (isDevelopment) {
           console.log('Initial sign in, setting up token')
+          console.log('Account scope:', account.scope)
         }
+        
+        // Check if we have the required scopes
+        const requiredScope = 'https://www.googleapis.com/auth/spreadsheets'
+        const hasRequiredScope = account.scope?.includes(requiredScope)
+        
+        if (!hasRequiredScope) {
+          console.error('Missing required Google Sheets scope!')
+          return {
+            ...token,
+            error: 'InsufficientScope'
+          }
+        }
+        
         return {
           ...token,
           accessToken: account.access_token,
@@ -102,33 +124,29 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           console.error('Error refreshing access token:', error)
-          // For development, continue with existing token instead of failing
-          if (isDevelopment) {
-            console.log('Development mode: Continuing with existing token despite error')
-            return { 
-              ...token, 
-              error: undefined, // Don't set error to prevent logout
-            }
-          } else {
-            return { 
-              ...token, 
-              error: 'RefreshAccessTokenError',
-            }
+          // Token is invalid, force re-authentication
+          return { 
+            ...token, 
+            error: 'RefreshAccessTokenError',
+            accessToken: undefined,
           }
         }
       }
 
-      // If no refresh token, continue with existing token for development
-      console.log('No refresh token available, continuing with existing session')
-      return { ...token, error: undefined }
+      // If no refresh token, force re-authentication
+      console.log('No refresh token available, forcing re-authentication')
+      return { ...token, error: 'RefreshAccessTokenError' }
     },
     async session({ session, token }) {
       // Send properties to the client
       session.accessToken = token.accessToken as string
       session.error = token.error as string
       
-      // For development, don't force logout on token errors
-      // User can continue with existing session
+      // If there's an error or no access token, force logout
+      if (token.error === 'RefreshAccessTokenError' || !token.accessToken) {
+        console.log('Session error detected, forcing logout')
+        session.error = 'RefreshAccessTokenError'
+      }
       
       return session
     },
