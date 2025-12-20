@@ -12,6 +12,7 @@ interface ExpenseItem {
   category: string
   breakdown: string
   amount: number
+  year: number
 }
 
 interface IncomeItem {
@@ -23,6 +24,27 @@ interface IncomeItem {
   totalIncome: number
   totalExpenses: number
   totalSavings: number
+  year: number
+}
+
+// Helper to extract year from month string like "Oct/25" -> 2025
+function extractYear(monthStr: string): number {
+  const parts = monthStr.split('/')
+  if (parts.length >= 2) {
+    const yearPart = parts[1]
+    return 2000 + parseInt(yearPart)
+  }
+  return new Date().getFullYear()
+}
+
+// Helper to parse month string to month number
+function getMonthNumber(monthStr: string): number {
+  const monthMap: { [key: string]: number } = {
+    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
+  }
+  const [monthPart] = monthStr.split('/')
+  return monthMap[monthPart.toLowerCase()] || 0
 }
 
 export async function GET(request: NextRequest) {
@@ -37,11 +59,17 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    let month = searchParams.get('month')
+    const month = searchParams.get('month')
+    const year = searchParams.get('year') // New: year filter
     
-    // Clear cache and get fresh data for debugging
-    const cacheKey = `budget-${month || 'all'}-v2` // Changed cache key to force refresh
-    cache.clear() // Clear all cache for debugging - force fresh data
+    // Cache key includes year
+    const cacheKey = `budget-${year || 'all'}-${month || 'all'}-v3`
+    
+    // Check cache (disabled for debugging)
+    // const cached = cache.get(cacheKey)
+    // if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    //   return NextResponse.json(cached.data)
+    // }
 
     // Set up Google Sheets API
     const auth = new google.auth.OAuth2()
@@ -58,7 +86,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`Fetching budget data from Google Sheet: ${spreadsheetId}`)
 
-    // First, let's try to get sheet metadata to see available sheets
+    // Get all available sheets
     const sheetsInfo = await sheets.spreadsheets.get({
       spreadsheetId,
     })
@@ -66,125 +94,157 @@ export async function GET(request: NextRequest) {
     const availableSheets = sheetsInfo.data.sheets?.map(sheet => sheet.properties?.title) || []
     console.log('Available sheets:', availableSheets)
 
-    // Use the exact sheet name "Monthly Budget 2025" as specified by user
-    let budgetSheetName = 'Monthly Budget 2025'
-    let incomeSheetName = 'Earning Breakdown'
-    
-    console.log(`Using budget sheet: "${budgetSheetName}", income sheet: "${incomeSheetName}"`)
-    
-    // Fetch all data from Monthly Budget 2025 sheet (contains both expense and income data)
-    const allDataResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `${budgetSheetName}!A:M`, // Get all columns A through M from Monthly Budget 2025
-    })
+    // Find all "Monthly Budget YYYY" sheets dynamically
+    const budgetSheetPattern = /^Monthly Budget (\d{4})$/
+    const budgetSheets = availableSheets
+      .filter((name): name is string => name !== undefined && budgetSheetPattern.test(name))
+      .map(name => {
+        const match = name.match(budgetSheetPattern)
+        return {
+          name,
+          year: match ? parseInt(match[1]) : 0
+        }
+      })
+      .sort((a, b) => a.year - b.year) // Sort by year ascending
 
-    const allRows = allDataResponse.data.values || []
+    console.log('Found budget sheets:', budgetSheets)
 
-    console.log(`Fetched ${allRows.length} rows from Monthly Budget 2025`)
-    console.log('First 3 rows (all columns A-M):', allRows.slice(0, 3))
-    console.log('Header row structure:', allRows[0])
-
-    if (allRows.length === 0) {
+    if (budgetSheets.length === 0) {
       return NextResponse.json({
         expenses: [],
         income: [],
-        summary: {}
+        summary: {},
+        availableMonths: [],
+        availableYears: []
       })
     }
 
-    // Parse both expense and income data from Monthly Budget 2025 sheet
-    const expenses: ExpenseItem[] = []
-    const income: IncomeItem[] = []
+    // Collect all expenses and income from all budget sheets
+    const allExpenses: ExpenseItem[] = []
+    const allIncome: IncomeItem[] = []
     
     const parseAmount = (value: string | undefined) => {
       if (!value) return 0
       const clean = value.toString().replace(/[₹,\s]/g, '')
       return parseFloat(clean) || 0
     }
-    
-    // Skip header row and parse all data
-    for (let i = 1; i < allRows.length; i++) {
-      const row = allRows[i]
-      if (!row || row.length < 4) continue
+
+    // Fetch data from each budget sheet
+    for (const budgetSheet of budgetSheets) {
+      console.log(`Fetching data from sheet: "${budgetSheet.name}"`)
       
-      // Parse expense data (columns A-D)
-      const monthValue = row[0]?.toString().trim()
-      const category = row[1]?.toString().trim()
-      const breakdown = row[2]?.toString().trim()
-      const rawAmount = row[3]?.toString() || '0'
-      
-      if (monthValue && breakdown) {
-        const amount = parseAmount(rawAmount)
-        expenses.push({
-          month: monthValue,
-          category: category || 'Uncategorized',
-          breakdown,
-          amount
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId,
+          range: `'${budgetSheet.name}'!A:M`,
         })
-      }
-      
-      // Parse income data (columns F-M) - check if row has income data
-      if (row.length >= 13) {
-        const incomeMonth = row[5]?.toString().trim() // Column F
-        if (incomeMonth && incomeMonth.toLowerCase() !== 'total') { // Skip "Total" row
-          const rawTaxDeduction = row[9]?.toString() || '0' // Column J
-          const taxDeduction = parseAmount(rawTaxDeduction)
+
+        const rows = response.data.values || []
+        console.log(`Fetched ${rows.length} rows from ${budgetSheet.name}`)
+
+        if (rows.length === 0) continue
+
+        // Skip header row and parse data
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i]
+          if (!row || row.length < 4) continue
           
-          income.push({
-            month: incomeMonth,                         // Column F
-            incomeSource1: parseAmount(row[6]),         // Column G
-            incomeSource2: parseAmount(row[7]),         // Column H
-            otherIncome: parseAmount(row[8]),           // Column I
-            otherTaxDeduction: taxDeduction,            // Column J
-            totalIncome: parseAmount(row[10]),          // Column K
-            totalExpenses: parseAmount(row[11]),        // Column L
-            totalSavings: parseAmount(row[12])          // Column M
-          })
+          // Parse expense data (columns A-D)
+          const monthValue = row[0]?.toString().trim()
+          const category = row[1]?.toString().trim()
+          const breakdown = row[2]?.toString().trim()
+          const rawAmount = row[3]?.toString() || '0'
+          
+          if (monthValue && breakdown) {
+            const amount = parseAmount(rawAmount)
+            const expenseYear = extractYear(monthValue)
+            allExpenses.push({
+              month: monthValue,
+              category: category || 'Uncategorized',
+              breakdown,
+              amount,
+              year: expenseYear
+            })
+          }
+          
+          // Parse income data (columns F-M)
+          if (row.length >= 13) {
+            const incomeMonth = row[5]?.toString().trim()
+            if (incomeMonth && incomeMonth.toLowerCase() !== 'total' && incomeMonth.toLowerCase() !== 'month') {
+              const incomeYear = extractYear(incomeMonth)
+              allIncome.push({
+                month: incomeMonth,
+                incomeSource1: parseAmount(row[6]),
+                incomeSource2: parseAmount(row[7]),
+                otherIncome: parseAmount(row[8]),
+                otherTaxDeduction: parseAmount(row[9]),
+                totalIncome: parseAmount(row[10]),
+                totalExpenses: parseAmount(row[11]),
+                totalSavings: parseAmount(row[12]),
+                year: incomeYear
+              })
+            }
+          }
         }
+      } catch (err) {
+        console.error(`Error fetching sheet ${budgetSheet.name}:`, err)
       }
     }
 
-    // Filter out future months (include current month since we want up-to-date data)
+    console.log(`Total expenses: ${allExpenses.length}, Total income records: ${allIncome.length}`)
+
+    // Get available years from income data
+    const availableYears = Array.from(new Set(allIncome.map(inc => inc.year))).sort((a, b) => b - a)
+    console.log('Available years:', availableYears)
+
     const currentDate = new Date()
-    const currentMonth = currentDate.getMonth() + 1 // 1-12
+    const currentMonth = currentDate.getMonth() + 1
     const currentYear = currentDate.getFullYear()
     
-    const filteredIncome = income.filter(inc => {
-      // Extract month and year from format like "Oct/25"
-      const [monthStr, yearStr] = inc.month.split('/')
-      const year = 2000 + parseInt(yearStr) // Convert "25" to 2025
-      
-      const monthMap: { [key: string]: number } = {
-        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-      }
-      const month = monthMap[monthStr.toLowerCase()]
-      
-      // Include current month and all past months (up to current month)
-      return year < currentYear || (year === currentYear && month <= currentMonth)
-    })
-    
-    // Filter by month if specified
-    let finalExpenses = expenses
-    let finalIncome = filteredIncome // Use filtered income (no future months)
-    let latestIncomeData
-    
+    let filteredIncome = [...allIncome]
+    let filteredExpenses = [...allExpenses]
+
+    // Apply year filter if specified
+    if (year && year !== 'all') {
+      const yearNum = parseInt(year)
+      // When specific year is selected, show ALL data for that year (including future months)
+      filteredIncome = allIncome.filter(inc => inc.year === yearNum)
+      filteredExpenses = allExpenses.filter(exp => exp.year === yearNum)
+      console.log(`Filtered to year ${year}: ${filteredIncome.length} income, ${filteredExpenses.length} expenses`)
+    } else {
+      // For "All Years", filter out future months to avoid confusion
+      filteredIncome = allIncome.filter(inc => {
+        const incYear = inc.year
+        const incMonth = getMonthNumber(inc.month)
+        return incYear < currentYear || (incYear === currentYear && incMonth <= currentMonth)
+      })
+
+      filteredExpenses = allExpenses.filter(exp => {
+        const expYear = exp.year
+        const expMonth = getMonthNumber(exp.month)
+        return expYear < currentYear || (expYear === currentYear && expMonth <= currentMonth)
+      })
+    }
+
+    // Apply month filter if specified
+    let finalExpenses = filteredExpenses
+    let finalIncome = filteredIncome
+    let latestIncomeData: IncomeItem | { month: string; incomeSource1: number; incomeSource2: number; otherIncome: number; otherTaxDeduction: number; totalIncome: number; totalExpenses: number; totalSavings: number; year: number }
+
     if (month && month !== 'all') {
-      finalExpenses = expenses.filter(expense => 
+      finalExpenses = filteredExpenses.filter(expense => 
         expense.month.toLowerCase().includes(month.toLowerCase())
       )
-      // For specific month selection, use that month's data
       const selectedMonthData = filteredIncome.filter(inc => 
         inc.month.toLowerCase().includes(month.toLowerCase())
       )
-      // For summary cards, use selected month data
       if (selectedMonthData.length > 0) {
         latestIncomeData = selectedMonthData[0]
       } else {
-        latestIncomeData = filteredIncome[filteredIncome.length - 1] || filteredIncome[0]
+        latestIncomeData = filteredIncome[filteredIncome.length - 1] || createEmptyIncomeItem()
       }
     } else {
-      // For "All Months", aggregate data from ALL filtered months (Jan to current)
+      // Aggregate all months
       latestIncomeData = {
         month: 'All Months',
         incomeSource1: filteredIncome.reduce((sum, inc) => sum + inc.incomeSource1, 0),
@@ -193,39 +253,23 @@ export async function GET(request: NextRequest) {
         otherTaxDeduction: filteredIncome.reduce((sum, inc) => sum + inc.otherTaxDeduction, 0),
         totalIncome: filteredIncome.reduce((sum, inc) => sum + inc.totalIncome, 0),
         totalExpenses: filteredIncome.reduce((sum, inc) => sum + inc.totalExpenses, 0),
-        totalSavings: filteredIncome.reduce((sum, inc) => sum + inc.totalSavings, 0)
+        totalSavings: filteredIncome.reduce((sum, inc) => sum + inc.totalSavings, 0),
+        year: year ? parseInt(year) : currentYear
       }
     }
 
-    // Generate insights and summary with context
-    const summary = generateBudgetSummary(finalExpenses, finalIncome, latestIncomeData, filteredIncome)
+    // Generate summary - pass allIncome for complete fiscal year tax calculations
+    const summary = generateBudgetSummary(finalExpenses, finalIncome, latestIncomeData, filteredIncome, year ? parseInt(year) : null, allIncome)
 
     // Sort months chronologically
-    const sortMonthsChronologically = (months: string[]) => {
-      const monthOrder: { [key: string]: number } = {
-        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-        'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-      }
-      
-      return months.sort((a, b) => {
-        const [monthA, yearA] = a.split('/')
-        const [monthB, yearB] = b.split('/')
-        
-        const yearDiff = parseInt(yearA) - parseInt(yearB)
-        if (yearDiff !== 0) return yearDiff
-        
-        const monthOrderA = monthOrder[monthA.toLowerCase()] || 0
-        const monthOrderB = monthOrder[monthB.toLowerCase()] || 0
-        
-        return monthOrderA - monthOrderB
-      })
-    }
+    const sortedMonths = sortMonthsChronologically(Array.from(new Set(filteredIncome.map(e => e.month))))
 
     const result = {
       expenses: finalExpenses,
       income: finalIncome,
       summary,
-      availableMonths: sortMonthsChronologically(Array.from(new Set(filteredIncome.map(e => e.month))))
+      availableMonths: sortedMonths,
+      availableYears
     }
 
     // Cache the result
@@ -242,7 +286,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateBudgetSummary(expenses: ExpenseItem[], income: IncomeItem[], latestIncomeData: IncomeItem, filteredIncomeForTrends: IncomeItem[]) {
+function createEmptyIncomeItem(): IncomeItem {
+  return {
+    month: '',
+    incomeSource1: 0,
+    incomeSource2: 0,
+    otherIncome: 0,
+    otherTaxDeduction: 0,
+    totalIncome: 0,
+    totalExpenses: 0,
+    totalSavings: 0,
+    year: new Date().getFullYear()
+  }
+}
+
+function sortMonthsChronologically(months: string[]): string[] {
+  return months.sort((a, b) => {
+    const yearA = extractYear(a)
+    const yearB = extractYear(b)
+    
+    if (yearA !== yearB) return yearA - yearB
+    
+    return getMonthNumber(a) - getMonthNumber(b)
+  })
+}
+
+function generateBudgetSummary(
+  expenses: ExpenseItem[], 
+  income: IncomeItem[], 
+  latestIncomeData: IncomeItem | { month: string; incomeSource1: number; incomeSource2: number; otherIncome: number; otherTaxDeduction: number; totalIncome: number; totalExpenses: number; totalSavings: number; year: number },
+  filteredIncomeForTrends: IncomeItem[],
+  selectedYear: number | null,
+  allIncomeForTax: IncomeItem[] // All income data from all sheets for fiscal year tax calculation
+) {
   if (income.length === 0) {
     return {
       topCategories: [],
@@ -256,41 +332,38 @@ function generateBudgetSummary(expenses: ExpenseItem[], income: IncomeItem[], la
       taxDeductions: {
         total: 0,
         fromApr: 0,
-        monthlyBreakdown: []
+        monthlyBreakdown: [],
+        fiscalYear: ''
       }
     }
   }
   
-  // Category-wise expense analysis from expense breakdown data
+  // Category-wise expense analysis
   const categoryTotals: { [key: string]: number } = {}
   const monthlyExpenses: { [key: string]: number } = {}
   
   expenses.forEach(expense => {
     const category = expense.category || 'Other'
     
-    // Category totals
     if (!categoryTotals[category]) {
       categoryTotals[category] = 0
     }
     categoryTotals[category] += expense.amount
     
-    // Monthly totals
     if (!monthlyExpenses[expense.month]) {
       monthlyExpenses[expense.month] = 0
     }
     monthlyExpenses[expense.month] += expense.amount
   })
 
-  // Create top spending categories from actual expense data
+  // Top spending categories
   let topCategories = Object.entries(categoryTotals)
     .filter(([category]) => category && category.trim() !== '')
     .sort(([, a], [, b]) => b - a)
     .slice(0, 5)
     .map(([category, amount]) => ({ category, amount }))
   
-  // If no expense categories, create insights from expense breakdown data
   if (topCategories.length === 0 && expenses.length > 0) {
-    // Group by breakdown items when categories are missing
     const breakdownTotals: { [key: string]: number } = {}
     expenses.forEach(expense => {
       const breakdown = expense.breakdown || 'Other'
@@ -306,11 +379,10 @@ function generateBudgetSummary(expenses: ExpenseItem[], income: IncomeItem[], la
       .map(([breakdown, amount]) => ({ category: breakdown, amount }))
   }
 
-  // Calculate tax deductions using filtered income (no future months)
-  const taxDeductions = calculateTaxDeductions(filteredIncomeForTrends)
+  // Calculate tax deductions with fiscal year context - use ALL income to span both sheets
+  const taxDeductions = calculateTaxDeductions(allIncomeForTax, selectedYear)
 
-  // Get last 4 months for trends (always show last 4 months regardless of selection)
-  // Use the filtered income data (no future months) and always get last 4
+  // Get last 4 months for trends
   const last4Months = filteredIncomeForTrends.slice(-4)
   const monthlyTrends = last4Months.map(inc => ({
     month: inc.month,
@@ -320,7 +392,6 @@ function generateBudgetSummary(expenses: ExpenseItem[], income: IncomeItem[], la
     savingsRate: inc.totalIncome > 0 ? (inc.totalSavings / inc.totalIncome) * 100 : 0
   }))
 
-  // Use latest month data for summary cards
   const savingsRate = latestIncomeData.totalIncome > 0 
     ? (latestIncomeData.totalSavings / latestIncomeData.totalIncome) * 100 
     : 0
@@ -338,29 +409,81 @@ function generateBudgetSummary(expenses: ExpenseItem[], income: IncomeItem[], la
   }
 }
 
-function calculateTaxDeductions(income: IncomeItem[]) {
-  // Find April (starting month) index
-  const aprIndex = income.findIndex(inc => inc.month.toLowerCase().includes('apr'))
-  const startIndex = aprIndex >= 0 ? aprIndex : 0
+function calculateTaxDeductions(income: IncomeItem[], selectedYear: number | null) {
+  // Determine fiscal year (Apr - Mar)
+  const currentDate = new Date()
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth() + 1
   
-  // Calculate from April to latest month
-  const relevantMonths = income.slice(startIndex)
+  // Fiscal year starts in April
+  // If selected year is provided, use that; otherwise use current fiscal year
+  let fiscalYearStart: number
+  let fiscalYearEnd: number
   
-  // All values in the sheet are negative, so we convert them to positive amounts
-  const totalTaxDeductions = relevantMonths.reduce((sum, inc) => {
-    // All tax deduction values are negative, convert to positive
+  if (selectedYear) {
+    fiscalYearStart = selectedYear
+    fiscalYearEnd = selectedYear + 1
+  } else {
+    // Current fiscal year: if we're in Jan-Mar, FY started last year
+    fiscalYearStart = currentMonth >= 4 ? currentYear : currentYear - 1
+    fiscalYearEnd = fiscalYearStart + 1
+  }
+  
+  const fiscalYearLabel = `FY ${fiscalYearStart}-${fiscalYearEnd.toString().slice(-2)}`
+  
+  console.log(`Calculating tax for ${fiscalYearLabel}: Apr/${fiscalYearStart.toString().slice(-2)} to Mar/${fiscalYearEnd.toString().slice(-2)}`)
+  console.log(`Total income records to search: ${income.length}`)
+  
+  // Filter income for fiscal year (Apr of start year to Mar of end year)
+  const fiscalYearIncome = income.filter(inc => {
+    const incYear = inc.year
+    const incMonth = getMonthNumber(inc.month)
+    
+    // Apr-Dec of start year OR Jan-Mar of end year
+    const isInFiscalYear = 
+      (incYear === fiscalYearStart && incMonth >= 4) ||
+      (incYear === fiscalYearEnd && incMonth <= 3)
+    
+    return isInFiscalYear
+  })
+  
+  console.log(`Found ${fiscalYearIncome.length} months in fiscal year`)
+  
+  // Sort by fiscal year order: Apr(4), May(5)...Dec(12), Jan(1), Feb(2), Mar(3)
+  const sortedFiscalYearIncome = fiscalYearIncome.sort((a, b) => {
+    const monthA = getMonthNumber(a.month)
+    const monthB = getMonthNumber(b.month)
+    const yearA = a.year
+    const yearB = b.year
+    
+    // First sort by year
+    if (yearA !== yearB) return yearA - yearB
+    
+    // Then by month (Apr-Dec comes before Jan-Mar in fiscal year)
+    // Convert to fiscal month order: Apr=1, May=2...Dec=9, Jan=10, Feb=11, Mar=12
+    const fiscalMonthA = monthA >= 4 ? monthA - 3 : monthA + 9
+    const fiscalMonthB = monthB >= 4 ? monthB - 3 : monthB + 9
+    
+    return fiscalMonthA - fiscalMonthB
+  })
+  
+  // Calculate tax deductions
+  const totalTaxDeductions = sortedFiscalYearIncome.reduce((sum, inc) => {
     const taxAmount = inc.otherTaxDeduction !== 0 ? Math.abs(inc.otherTaxDeduction) : 0
     return sum + taxAmount
   }, 0)
   
-  const monthlyBreakdown = relevantMonths.map(inc => ({
+  const monthlyBreakdown = sortedFiscalYearIncome.map(inc => ({
     month: inc.month,
     amount: inc.otherTaxDeduction !== 0 ? Math.abs(inc.otherTaxDeduction) : 0
   })).filter(item => item.amount > 0)
 
+  console.log(`Tax breakdown months: ${monthlyBreakdown.map(m => m.month).join(', ')}`)
+
   return {
     total: totalTaxDeductions,
     fromApr: totalTaxDeductions,
-    monthlyBreakdown
+    monthlyBreakdown,
+    fiscalYear: fiscalYearLabel
   }
 }

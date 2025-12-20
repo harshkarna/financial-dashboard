@@ -6,7 +6,7 @@ import { NetWorthCard } from './NetWorthCard'
 import { MonthSelector } from './MonthSelector'
 import { AssetBreakdown } from './AssetBreakdown'
 import { TrendChart } from './TrendChart'
-import { Header } from './Header'
+import { RefreshCw, AlertCircle } from 'lucide-react'
 
 interface DashboardProps {
   session: Session
@@ -89,22 +89,44 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <div className="stagger-children space-y-6">
+          {/* Loading skeleton */}
+          <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded-2xl w-48 animate-pulse" />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="lg:col-span-1">
+              <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+            </div>
+            <div className="lg:col-span-2">
+              <div className="h-80 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl animate-pulse" />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Something went wrong</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">{error}</p>
           <button 
             onClick={() => fetchData(selectedMonth)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transform hover:scale-105 transition-all duration-200"
           >
-            Retry
+            <RefreshCw className="w-4 h-4" />
+            Try Again
           </button>
         </div>
       </div>
@@ -112,8 +134,10 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+      <div className="space-y-4 md:space-y-6">
+        {/* Month Selector - Scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 hide-scrollbar">
           <MonthSelector
             months={months}
             selectedMonth={selectedMonth}
@@ -121,31 +145,40 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
           />
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-1">
+        {/* Main content grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* Net Worth Card - Full width on mobile, 1/3 on desktop */}
+          <div className="lg:col-span-1 animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <NetWorthCard 
               netWorth={data?.netWorth || 0}
               month={selectedMonth}
             />
           </div>
           
-          <div className="lg:col-span-2">
+          {/* Trend Chart - Full width on mobile, 2/3 on desktop */}
+          <div className="lg:col-span-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <TrendChart currentMonth={selectedMonth} />
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AssetBreakdown 
-            title="Assets" 
-            items={data?.assets || []} 
-            type="positive"
-          />
-          <AssetBreakdown 
-            title="Liabilities" 
-            items={data?.liabilities || []} 
-            type="negative"
-          />
+        {/* Assets and Liabilities - Stack on mobile, side by side on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
+            <AssetBreakdown 
+              title="Assets" 
+              items={data?.assets || []} 
+              type="positive"
+            />
+          </div>
+          <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
+            <AssetBreakdown 
+              title="Liabilities" 
+              items={data?.liabilities || []} 
+              type="negative"
+            />
+          </div>
         </div>
+      </div>
     </div>
   )
 }
