@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     // Find all "Monthly Budget YYYY" sheets dynamically
     const budgetSheetPattern = /^Monthly Budget (\d{4})$/
     const budgetSheets = availableSheets
-      .filter((name): name is string => name !== undefined && budgetSheetPattern.test(name))
+      .filter((name): name is string => name !== null && name !== undefined && budgetSheetPattern.test(name))
       .map(name => {
         const match = name.match(budgetSheetPattern)
         return {
