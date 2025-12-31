@@ -462,112 +462,145 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
 
   return (
     <>
-      {/* Full Screen Celebration Popup */}
+      {/* Full Screen Celebration Modal - Portal Style */}
       {showCelebration && currentMilestone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop with blur */}
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+          }}
+        >
+          {/* Dark Backdrop with Blur */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            style={{ position: 'fixed', inset: 0 }}
             onClick={() => setShowCelebration(false)}
           />
           
           {/* Balloons from top */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
             {Array.from({ length: 20 }).map((_, i) => (
               <Balloon key={`top-${i}`} delay={i * 150} fromTop={true} />
             ))}
           </div>
           
           {/* Balloons from bottom */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
             {Array.from({ length: 15 }).map((_, i) => (
               <Balloon key={`bottom-${i}`} delay={i * 200 + 500} fromTop={false} />
             ))}
           </div>
           
           {/* Confetti */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
             {Array.from({ length: 80 }).map((_, i) => (
               <Confetti key={i} delay={i * 50} />
             ))}
           </div>
           
           {/* Sparkles */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
             {Array.from({ length: 20 }).map((_, i) => (
               <Sparkle key={i} delay={i * 200} />
             ))}
           </div>
           
-          {/* Celebration Card */}
-          <div className="relative z-10 bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-3xl p-1 shadow-2xl animate-celebration-pop mx-4">
-            <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 md:p-12 text-center">
-              {/* Trophy Icon */}
-              <div className="mb-6 animate-bounce-slow">
-                <div className="inline-block p-4 bg-gradient-to-br from-yellow-300 to-yellow-500 rounded-full shadow-lg">
-                  <Trophy className="h-16 w-16 text-white" />
+          {/* Celebration Card - Centered */}
+          <div 
+            className="relative w-full max-w-md mx-auto animate-celebration-pop"
+            style={{ zIndex: 10 }}
+          >
+            {/* Outer Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 rounded-3xl blur-lg opacity-75 animate-pulse" />
+            
+            {/* Card with gradient border */}
+            <div className="relative bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-3xl p-1 shadow-2xl">
+              <div className="bg-gray-900 rounded-3xl p-6 sm:p-8 md:p-10 text-center max-h-[85vh] overflow-y-auto">
+                {/* Trophy Icon */}
+                <div className="mb-4 sm:mb-6 animate-bounce-slow">
+                  <div className="inline-block p-3 sm:p-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shadow-lg shadow-yellow-500/50">
+                    <Trophy className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
+                  </div>
                 </div>
+                
+                {/* Decorative trophies */}
+                <div className="flex justify-center gap-2 mb-2">
+                  <span className="text-3xl animate-bounce" style={{ animationDelay: '0ms' }}>🏆</span>
+                  <span className="text-3xl animate-bounce" style={{ animationDelay: '100ms' }}>🎊</span>
+                  <span className="text-3xl animate-bounce" style={{ animationDelay: '200ms' }}>🏆</span>
+                </div>
+                
+                {/* Congratulations Text */}
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 mb-3 sm:mb-4">
+                  Congratulations!
+                </h2>
+                
+                {/* Milestone Achievement */}
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-gray-400 text-base sm:text-lg mb-2">You've reached</p>
+                  <div className="flex items-center justify-center gap-2 sm:gap-3 my-3">
+                    <span className="text-4xl sm:text-5xl">{currentMilestone.emoji}</span>
+                    <div>
+                      <span className="text-4xl sm:text-6xl font-black text-white block">
+                        {currentMilestone.label.split(' ')[0]}
+                      </span>
+                      <span className="text-2xl sm:text-3xl font-bold text-gray-300">
+                        {currentMilestone.label.split(' ')[1]}
+                      </span>
+                    </div>
+                    <span className="text-4xl sm:text-5xl">{currentMilestone.emoji}</span>
+                  </div>
+                  <p className="text-gray-400 text-base sm:text-lg">Net Worth Milestone!</p>
+                </div>
+                
+                {/* Milestone Info */}
+                {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value) && (
+                  <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-xl p-3 sm:p-4 mb-4 border border-green-700/50">
+                    <p className="text-green-300 font-medium text-sm sm:text-base">
+                      🚀 Journey: {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)?.journeyStart} → {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)?.achievedMonth}
+                    </p>
+                    <p className="text-green-400 text-xs sm:text-sm mt-1">
+                      {(() => {
+                        const info = milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)
+                        if (!info) return ''
+                        const years = Math.floor(info.monthsToReach / 12)
+                        const months = info.monthsToReach % 12
+                        if (years > 0 && months > 0) return `Achieved in ${years} years ${months} months`
+                        if (years > 0) return `Achieved in ${years} years`
+                        return `Achieved in ${months} months`
+                      })()}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Next Milestone Teaser */}
+                {nextMilestone && (
+                  <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl p-3 sm:p-4 mb-4 border border-blue-700/50">
+                    <p className="text-blue-300 font-medium text-sm sm:text-base">
+                      Next Target: {nextMilestone.label} {nextMilestone.emoji}
+                    </p>
+                    <p className="text-blue-400 text-xs sm:text-sm mt-1">
+                      {formatShort(amountToNext)} to go! Keep going! 💪
+                    </p>
+                  </div>
+                )}
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="mt-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white font-bold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 transition-all duration-200 text-sm sm:text-base"
+                >
+                  Thanks! 🙏
+                </button>
+                
+                <p className="text-xs text-gray-500 mt-3">Click anywhere to close</p>
               </div>
-              
-              {/* Congratulations Text */}
-              <h2 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 via-orange-500 to-pink-500 mb-4">
-                🎉 Congratulations! 🎉
-              </h2>
-              
-              {/* Milestone Achievement */}
-              <div className="mb-6">
-                <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">You've reached</p>
-                <div className="flex items-center justify-center gap-3">
-                  <span className="text-5xl">{currentMilestone.emoji}</span>
-                  <span className="text-4xl md:text-5xl font-black text-gray-800 dark:text-white">
-                    {currentMilestone.label}
-                  </span>
-                  <span className="text-5xl">{currentMilestone.emoji}</span>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">Net Worth Milestone!</p>
-              </div>
-              
-              {/* Milestone Info */}
-              {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value) && (
-                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 rounded-xl p-4 mb-6">
-                  <p className="text-green-700 dark:text-green-300 font-medium">
-                    🚀 Journey: {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)?.journeyStart} → {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)?.achievedMonth}
-                  </p>
-                  <p className="text-green-600 dark:text-green-400 text-sm mt-1">
-                    {(() => {
-                      const info = milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)
-                      if (!info) return ''
-                      const years = Math.floor(info.monthsToReach / 12)
-                      const months = info.monthsToReach % 12
-                      if (years > 0 && months > 0) return `Achieved in ${years} years ${months} months`
-                      if (years > 0) return `Achieved in ${years} years`
-                      return `Achieved in ${months} months`
-                    })()}
-                  </p>
-                </div>
-              )}
-              
-              {/* Next Milestone Teaser */}
-              {nextMilestone && (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl p-4 mb-6">
-                  <p className="text-blue-700 dark:text-blue-300 font-medium">
-                    Next Target: {nextMilestone.label} {nextMilestone.emoji}
-                  </p>
-                  <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">
-                    {formatShort(amountToNext)} to go! Keep going! 💪
-                  </p>
-                </div>
-              )}
-              
-              {/* Close Button */}
-              <button
-                onClick={() => setShowCelebration(false)}
-                className="mt-2 px-8 py-3 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-              >
-                Thanks! 🙏
-              </button>
-              
-              <p className="text-xs text-gray-400 mt-4">Click anywhere to close</p>
             </div>
           </div>
         </div>

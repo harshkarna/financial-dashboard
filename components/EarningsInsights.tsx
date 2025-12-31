@@ -74,6 +74,11 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
     // Also filter out months with zero or very low income (likely incomplete)
     const filteredData = completeData.filter(record => record.income > 1000) // Minimum threshold for complete data
 
+    // Return null if no valid data after filtering
+    if (filteredData.length === 0) {
+      return null
+    }
+
     // Last 6 months analysis (from filtered complete data)
     const last6Months = filteredData.slice(-6)
     const last3Months = filteredData.slice(-3)
@@ -87,28 +92,17 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
       const firstPeriodIncome = firstPeriod.reduce((sum, r) => sum + r.income, 0)
       const secondPeriodIncome = secondPeriod.reduce((sum, r) => sum + r.income, 0)
       
-      // Debug logging
-      console.log('=== Income Growth Calculation Debug ===')
-      console.log('Total filtered data length:', filteredData.length)
-      console.log('Last 6 months data:', last6Months.map(r => `${r.month} ${r.year}: ₹${r.income.toLocaleString()}`))
-      console.log('First 3 months:', firstPeriod.map(r => `${r.month} ${r.year}: ₹${r.income.toLocaleString()}`))
-      console.log('Second 3 months:', secondPeriod.map(r => `${r.month} ${r.year}: ₹${r.income.toLocaleString()}`))
-      console.log('First period total:', firstPeriodIncome.toLocaleString())
-      console.log('Second period total:', secondPeriodIncome.toLocaleString())
-      console.log('Calculation: ((', secondPeriodIncome, '-', firstPeriodIncome, ') /', firstPeriodIncome, ') * 100')
-      console.log('Raw growth value:', ((secondPeriodIncome - firstPeriodIncome) / firstPeriodIncome))
-      console.log('=== End Debug ===')
-      
       incomeGrowth = firstPeriodIncome > 0 ? ((secondPeriodIncome - firstPeriodIncome) / firstPeriodIncome) * 100 : 0
-      console.log('Growth percentage:', incomeGrowth)
     }
 
-    // Best and worst months (from complete data only)
+    // Best and worst months (from complete data only) - use first element as initial value
     const bestMonth = filteredData.reduce((best, current) => 
-      (current.income - current.expenditure) > (best.income - best.expenditure) ? current : best
+      (current.income - current.expenditure) > (best.income - best.expenditure) ? current : best,
+      filteredData[0]
     )
     const worstMonth = filteredData.reduce((worst, current) => 
-      (current.income - current.expenditure) < (worst.income - worst.expenditure) ? current : worst
+      (current.income - current.expenditure) < (worst.income - worst.expenditure) ? current : worst,
+      filteredData[0]
     )
 
     // Consistency analysis (using filtered data)
@@ -187,8 +181,17 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
   if (!insights) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8 transition-colors duration-200">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Financial Insights</h3>
-        <div className="text-center text-gray-500 dark:text-gray-400 py-8">No data available for insights</div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Financial Insights</h3>
+        <div className="text-center py-8">
+          <div className="text-5xl mb-4">📅</div>
+          <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No complete data available</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
+            {selectedYear && selectedYear > new Date().getFullYear() 
+              ? `Data for ${selectedYear} will appear as months complete`
+              : 'Add more earnings data to see insights'
+            }
+          </p>
+        </div>
       </div>
     )
   }

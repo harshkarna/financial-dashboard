@@ -14,12 +14,13 @@ import {
   User,
   Menu,
   X,
-  ChevronDown
+  ChevronDown,
+  BarChart3
 } from 'lucide-react'
 
 interface DashboardSelectorProps {
-  selectedDashboard: 'networth' | 'earnings' | 'budget'
-  onDashboardChange: (dashboard: 'networth' | 'earnings' | 'budget') => void
+  selectedDashboard: 'networth' | 'earnings' | 'budget' | 'investments'
+  onDashboardChange: (dashboard: 'networth' | 'earnings' | 'budget' | 'investments') => void
   session: Session
   onSignOut: () => void
 }
@@ -51,6 +52,15 @@ const dashboards = [
     color: 'from-purple-500 to-pink-500',
     bgColor: 'bg-purple-500/10',
     activeColor: 'text-purple-600 dark:text-purple-400'
+  },
+  { 
+    id: 'investments' as const, 
+    label: 'Investments', 
+    shortLabel: 'Invest',
+    icon: BarChart3, 
+    color: 'from-orange-500 to-red-500',
+    bgColor: 'bg-orange-500/10',
+    activeColor: 'text-orange-600 dark:text-orange-400'
   },
 ]
 
