@@ -121,12 +121,12 @@ export function TrendChart({ currentMonth }: TrendChartProps) {
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg shadow-blue-500/25">
               <Activity className="h-5 w-5 text-white" />
             </div>
-            <div>
+        <div>
               <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">Net Worth Trend</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">Monthly progression</p>
-            </div>
-          </div>
-          
+        </div>
+      </div>
+      
           <div className="flex items-center gap-2">
             <span className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-medium rounded-lg">
               Last 5 months
@@ -136,53 +136,53 @@ export function TrendChart({ currentMonth }: TrendChartProps) {
         
         {/* Chart */}
         <div className="h-48 md:h-56 mb-4">
-          <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+            <defs>
+              <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.3}/>
                   <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.05}/>
-                </linearGradient>
-              </defs>
+              </linearGradient>
+            </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" opacity={0.5} />
-              <XAxis 
-                dataKey="month" 
+            <XAxis 
+              dataKey="month" 
                 tick={{ fontSize: 10, fill: '#9CA3AF' }}
-                tickFormatter={(value) => value.split(' ')[0]}
+              tickFormatter={(value) => value.split(' ')[0]}
                 axisLine={false}
                 tickLine={false}
-              />
-              <YAxis 
+            />
+            <YAxis 
                 tick={{ fontSize: 10, fill: '#9CA3AF' }}
                 tickFormatter={formatShort}
                 axisLine={false}
                 tickLine={false}
                 width={40}
-              />
+            />
               <Tooltip content={<CustomTooltip />} />
               <Area
-                type="monotone"
-                dataKey="netWorth"
-                stroke="#3B82F6"
+              type="monotone" 
+              dataKey="netWorth" 
+              stroke="#3B82F6" 
                 strokeWidth={2.5}
                 fill="url(#colorGradient)"
-                dot={{ 
-                  fill: '#3B82F6', 
+              dot={{ 
+                fill: '#3B82F6', 
                   strokeWidth: 2, 
                   r: 4,
-                  stroke: '#ffffff'
-                }}
-                activeDot={{ 
+                stroke: '#ffffff'
+              }}
+              activeDot={{ 
                   r: 6, 
-                  stroke: '#3B82F6', 
+                stroke: '#3B82F6', 
                   strokeWidth: 2,
-                  fill: '#ffffff'
-                }}
-              />
+                fill: '#ffffff'
+              }}
+            />
             </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        
+        </ResponsiveContainer>
+      </div>
+      
         {/* Growth Stats */}
         <div className={`
           flex items-center justify-between p-3 md:p-4 rounded-xl

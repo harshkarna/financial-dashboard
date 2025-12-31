@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       const clean = value.toString().replace(/[₹,\s]/g, '')
       return parseFloat(clean) || 0
     }
-
+    
     // Fetch data from each budget sheet
     for (const budgetSheet of budgetSheets) {
       console.log(`Fetching data from sheet: "${budgetSheet.name}"`)
@@ -147,28 +147,28 @@ export async function GET(request: NextRequest) {
         // Skip header row and parse data
         for (let i = 1; i < rows.length; i++) {
           const row = rows[i]
-          if (!row || row.length < 4) continue
-          
-          // Parse expense data (columns A-D)
-          const monthValue = row[0]?.toString().trim()
-          const category = row[1]?.toString().trim()
-          const breakdown = row[2]?.toString().trim()
-          const rawAmount = row[3]?.toString() || '0'
-          
-          if (monthValue && breakdown) {
-            const amount = parseAmount(rawAmount)
+      if (!row || row.length < 4) continue
+      
+      // Parse expense data (columns A-D)
+      const monthValue = row[0]?.toString().trim()
+      const category = row[1]?.toString().trim()
+      const breakdown = row[2]?.toString().trim()
+      const rawAmount = row[3]?.toString() || '0'
+      
+      if (monthValue && breakdown) {
+        const amount = parseAmount(rawAmount)
             const expenseYear = extractYear(monthValue)
             allExpenses.push({
-              month: monthValue,
-              category: category || 'Uncategorized',
-              breakdown,
+          month: monthValue,
+          category: category || 'Uncategorized',
+          breakdown,
               amount,
               year: expenseYear
-            })
-          }
-          
+        })
+      }
+      
           // Parse income data (columns F-M)
-          if (row.length >= 13) {
+      if (row.length >= 13) {
             const incomeMonth = row[5]?.toString().trim()
             if (incomeMonth && incomeMonth.toLowerCase() !== 'total' && incomeMonth.toLowerCase() !== 'month') {
               const incomeYear = extractYear(incomeMonth)
@@ -182,10 +182,10 @@ export async function GET(request: NextRequest) {
                 totalExpenses: parseAmount(row[11]),
                 totalSavings: parseAmount(row[12]),
                 year: incomeYear
-              })
-            }
-          }
+          })
         }
+      }
+    }
       } catch (err) {
         console.error(`Error fetching sheet ${budgetSheet.name}:`, err)
       }
@@ -223,14 +223,14 @@ export async function GET(request: NextRequest) {
         const expYear = exp.year
         const expMonth = getMonthNumber(exp.month)
         return expYear < currentYear || (expYear === currentYear && expMonth <= currentMonth)
-      })
+    })
     }
-
+    
     // Apply month filter if specified
     let finalExpenses = filteredExpenses
     let finalIncome = filteredIncome
     let latestIncomeData: IncomeItem | { month: string; incomeSource1: number; incomeSource2: number; otherIncome: number; otherTaxDeduction: number; totalIncome: number; totalExpenses: number; totalSavings: number; year: number }
-
+    
     if (month && month !== 'all') {
       finalExpenses = filteredExpenses.filter(expense => 
         expense.month.toLowerCase().includes(month.toLowerCase())
@@ -438,7 +438,7 @@ function calculateTaxDeductions(income: IncomeItem[], selectedYear: number | nul
   const fiscalYearIncome = income.filter(inc => {
     const incYear = inc.year
     const incMonth = getMonthNumber(inc.month)
-    
+  
     // Apr-Dec of start year OR Jan-Mar of end year
     const isInFiscalYear = 
       (incYear === fiscalYearStart && incMonth >= 4) ||

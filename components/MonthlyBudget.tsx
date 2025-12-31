@@ -1,27 +1,28 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-// Simple Card components
+
+// Premium Card components with dark glassmorphism
 const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${className}`}>
+  <div className={`bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 shadow-lg ${className}`}>
     {children}
   </div>
 )
 
 const CardHeader = ({ children, className = '', onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-  <div className={`px-6 py-4 border-b border-gray-200 dark:border-gray-700 ${className}`} onClick={onClick}>
+  <div className={`px-5 py-4 border-b border-slate-700/50 ${className}`} onClick={onClick}>
     {children}
   </div>
 )
 
 const CardTitle = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <h3 className={`text-lg font-semibold text-gray-900 dark:text-white ${className}`}>
+  <h3 className={`text-lg font-bold text-white ${className}`}>
     {children}
   </h3>
 )
 
 const CardContent = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <div className={`px-6 py-4 ${className}`}>
+  <div className={`px-5 py-4 ${className}`}>
     {children}
   </div>
 )
@@ -99,9 +100,18 @@ interface BudgetData {
   availableYears: number[]
 }
 
+// Vibrant colors for charts
 const COLORS = [
-  '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
-  '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#84CC16', // Lime
+  '#F97316', // Orange
+  '#6366F1', // Indigo
 ]
 
 export function MonthlyBudget() {
@@ -390,15 +400,15 @@ export function MonthlyBudget() {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
+      <div className="space-y-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-8 bg-slate-700/50 rounded-xl w-1/3"></div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-28 bg-slate-700/50 rounded-2xl"></div>
             ))}
           </div>
+          <div className="h-64 bg-slate-700/50 rounded-2xl"></div>
         </div>
       </div>
     )
@@ -406,8 +416,9 @@ export function MonthlyBudget() {
 
   if (!budgetData) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-gray-700">
-        <p className="text-gray-500 dark:text-gray-400">No budget data available</p>
+      <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-8 text-center">
+        <div className="text-5xl mb-4">📊</div>
+        <p className="text-slate-400 text-lg">No budget data available</p>
       </div>
     )
   }
@@ -429,30 +440,23 @@ export function MonthlyBudget() {
   const taxFiscalYear = summary.taxDeductions?.fiscalYear || 'FY 2025-26'
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
-                <CreditCard className="h-4 w-4 md:h-5 md:w-5 text-white" />
-              </div>
-              <span className="hidden sm:inline">Monthly Budget</span>
-              <span className="sm:hidden">Budget</span>
-            </h2>
-            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1 ml-10 md:ml-12">
-              Analyze your spending patterns
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+            <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 shadow-lg shadow-purple-500/30">
+              <CreditCard className="h-5 w-5 md:h-6 md:w-6 text-white" />
+            </div>
+            Monthly Budget
+          </h1>
+          <p className="text-sm text-slate-400 mt-1 ml-[52px] md:ml-[60px]">
+            Analyze your spending patterns
+          </p>
         </div>
         
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-            <Calendar className="h-3.5 w-3.5 text-gray-500" />
-          </div>
-          
+        <div className="flex items-center gap-3">
           {/* Year Selector */}
           {budgetData.availableYears && budgetData.availableYears.length > 0 && (
             <select
@@ -461,7 +465,7 @@ export function MonthlyBudget() {
                 setSelectedYear(e.target.value)
                 setSelectedMonth('all')
               }}
-              className="appearance-none bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm min-w-[80px]"
+              className="appearance-none bg-slate-800 text-white text-sm px-4 py-2.5 rounded-xl border border-slate-600 focus:outline-none focus:border-purple-500 font-medium min-w-[90px]"
             >
               {budgetData.availableYears.map(year => (
                 <option key={year} value={year.toString()}>{year}</option>
@@ -474,7 +478,7 @@ export function MonthlyBudget() {
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="appearance-none bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm min-w-[100px]"
+              className="appearance-none bg-slate-800 text-white text-sm px-4 py-2.5 rounded-xl border border-slate-600 focus:outline-none focus:border-purple-500 font-medium min-w-[120px]"
             >
               <option value="all">All Months</option>
               {filteredMonths.map(month => (
@@ -485,145 +489,118 @@ export function MonthlyBudget() {
         </div>
       </div>
 
-      {/* Summary Cards - 2x2 grid on mobile */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-100 dark:border-emerald-800/50 overflow-hidden">
-          <CardContent className="p-3 md:p-4 relative">
-            <div className="absolute -top-4 -right-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mb-0.5">
-                Income
-              </p>
-              <p className="text-lg md:text-xl font-bold text-emerald-700 dark:text-emerald-300">
-                {formatShortCurrency(summary.totalIncome)}
-              </p>
+      {/* Summary Cards - Premium Dark Style with Glow */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Income Card */}
+        <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-900/50 to-green-900/40 rounded-2xl p-5 border border-emerald-500/30 glow-green hover-lift card-shine">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 rounded-full blur-3xl group-hover:bg-emerald-500/30 transition-colors"></div>
+          <div className="relative">
+            <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-emerald-500/30">
+              <DollarSign className="h-5 w-5 text-white" />
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-emerald-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Income</p>
+            <p className="text-2xl md:text-3xl font-black text-white">{formatShortCurrency(summary.totalIncome)}</p>
+          </div>
+        </div>
 
-        <Card className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-100 dark:border-red-800/50 overflow-hidden">
-          <CardContent className="p-3 md:p-4 relative">
-            <div className="absolute -top-4 -right-4 w-16 h-16 bg-red-500/10 rounded-full blur-xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <CreditCard className="h-5 w-5 md:h-6 md:w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-0.5">
-                Expenses
-              </p>
-              <p className="text-lg md:text-xl font-bold text-red-700 dark:text-red-300">
-                {formatShortCurrency(summary.totalExpenses)}
-              </p>
+        {/* Expenses Card */}
+        <div className="group relative overflow-hidden bg-gradient-to-br from-red-900/50 to-rose-900/40 rounded-2xl p-5 border border-red-500/30 glow-red hover-lift card-shine">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/20 rounded-full blur-3xl group-hover:bg-red-500/30 transition-colors"></div>
+          <div className="relative">
+            <div className="w-11 h-11 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-red-500/30">
+              <CreditCard className="h-5 w-5 text-white" />
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-red-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Expenses</p>
+            <p className="text-2xl md:text-3xl font-black text-white">{formatShortCurrency(summary.totalExpenses)}</p>
+          </div>
+        </div>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-100 dark:border-blue-800/50 overflow-hidden">
-          <CardContent className="p-3 md:p-4 relative">
-            <div className="absolute -top-4 -right-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                <PiggyBank className="h-5 w-5 md:h-6 md:w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-0.5">
-                Savings
-              </p>
-              <p className="text-lg md:text-xl font-bold text-blue-700 dark:text-blue-300">
-                {formatShortCurrency(summary.totalSavings)}
-              </p>
+        {/* Savings Card */}
+        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-900/50 to-cyan-900/40 rounded-2xl p-5 border border-blue-500/30 glow-blue hover-lift card-shine">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-colors"></div>
+          <div className="relative">
+            <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-blue-500/30">
+              <PiggyBank className="h-5 w-5 text-white" />
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-blue-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Savings</p>
+            <p className="text-2xl md:text-3xl font-black text-white">{formatShortCurrency(summary.totalSavings)}</p>
+          </div>
+        </div>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-100 dark:border-purple-800/50 overflow-hidden">
-          <CardContent className="p-3 md:p-4 relative">
-            <div className="absolute -top-4 -right-4 w-16 h-16 bg-purple-500/10 rounded-full blur-xl" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-2">
-                {summary.savingsRate >= 20 ? (
-                  <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-purple-600 dark:text-purple-400" />
-                ) : (
-                  <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-purple-600 dark:text-purple-400" />
-                )}
-              </div>
-              <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-0.5">
-                Save Rate
-              </p>
-              <p className="text-lg md:text-xl font-bold text-purple-700 dark:text-purple-300">
-                {summary.savingsRate}%
-              </p>
+        {/* Save Rate Card */}
+        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/40 rounded-2xl p-5 border border-purple-500/30 glow-purple hover-lift card-shine">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl group-hover:bg-purple-500/30 transition-colors"></div>
+          <div className="relative">
+            <div className="w-11 h-11 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-purple-500/30">
+              {summary.savingsRate >= 20 ? (
+                <TrendingUp className="h-5 w-5 text-white" />
+              ) : (
+                <TrendingDown className="h-5 w-5 text-white" />
+              )}
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-purple-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Save Rate</p>
+            <p className="text-2xl md:text-3xl font-black text-white">{summary.savingsRate}%</p>
+          </div>
+        </div>
       </div>
 
       {/* Smart Insights Section */}
       {insights.length > 0 && (
-        <Card className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-900/20 dark:via-purple-900/20 dark:to-pink-900/20 border-indigo-100 dark:border-indigo-800/50">
-          <CardHeader className="pb-2 md:pb-4">
-            <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <span className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
-                <span className="text-xl">✨</span>
-                Smart Insights
-              </span>
-              <span className="text-xs font-normal text-indigo-500 dark:text-indigo-400 ml-7 sm:ml-0">
-                AI-powered spending analysis
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {insights.map((insight, index) => (
-                <div
-                  key={index}
-                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-xl p-3 md:p-4 border border-indigo-100/50 dark:border-indigo-700/30 hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-600 transition-all duration-300"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl md:text-2xl flex-shrink-0">{insight.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
-                        {insight.title}
-                      </h4>
-                      <p className="text-gray-600 dark:text-gray-300 text-xs leading-relaxed line-clamp-3">
-                        {insight.description}
-                      </p>
-                    </div>
+        <div className="bg-gradient-to-br from-slate-800/80 via-purple-900/20 to-slate-800/80 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-purple-500/20 shadow-xl">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+              <span className="text-xl">✨</span>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Smart Insights</h3>
+              <p className="text-xs text-purple-400">AI-powered spending analysis</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {insights.map((insight, index) => (
+              <div
+                key={index}
+                className="group bg-slate-700/50 hover:bg-slate-700/80 rounded-xl p-4 border border-slate-600/50 hover:border-purple-500/50 transition-all duration-300"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl group-hover:scale-110 transition-transform">{insight.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-white text-sm mb-1">{insight.title}</h4>
+                    <p className="text-slate-400 text-xs leading-relaxed line-clamp-3">
+                      {insight.description}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Spending Categories Pie Chart */}
         {pieChartData.length > 0 && (
-          <Card className="bg-white dark:bg-gray-800/50 border-gray-100 dark:border-gray-700/50">
-            <CardHeader 
-              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors rounded-t-2xl"
+          <div className="glass-dark rounded-2xl glow-cyan overflow-hidden">
+            <div 
+              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-700/30 transition-colors border-b border-slate-700/50"
               onClick={() => toggleSection('categories')}
             >
-              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white text-base md:text-lg">
-                <span className="flex items-center gap-2">
-                  <span>🎯</span>
-                  <span className="hidden sm:inline">Top Spending Categories</span>
-                  <span className="sm:hidden">Categories</span>
-                </span>
-                {collapsedSections['categories'] ? (
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <ChevronUp className="h-5 w-5 text-gray-400" />
-                )}
-              </CardTitle>
-            </CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                  <span className="text-lg">🎯</span>
+                </div>
+                <h3 className="text-lg font-bold text-white">Top Spending Categories</h3>
+              </div>
+              {collapsedSections['categories'] ? (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronUp className="h-5 w-5 text-slate-400" />
+              )}
+            </div>
             {!collapsedSections['categories'] && (
-              <CardContent className="pt-0">
-                <div className="h-56 md:h-64">
+              <div className="px-5 pb-5 pt-3">
+                <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -632,148 +609,171 @@ export function MonthlyBudget() {
                         cy="50%"
                         labelLine={false}
                         label={({ category, percent }) => `${category.slice(0, 8)}${category.length > 8 ? '..' : ''} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={70}
+                        outerRadius={85}
+                        innerRadius={45}
                         fill="#8884d8"
                         dataKey="amount"
+                        stroke="rgba(30, 41, 59, 0.8)"
+                        strokeWidth={2}
                       >
                         {pieChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => formatCurrency(value as number)} />
+                      <Tooltip 
+                        formatter={(value) => formatCurrency(value as number)} 
+                        contentStyle={{
+                          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                          border: '1px solid rgba(6, 182, 212, 0.3)',
+                          borderRadius: '12px',
+                          color: '#fff',
+                          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </div>
         )}
 
         {/* Monthly Trends Line Chart */}
         {monthlyTrendsData.length > 0 && (
-          <Card className="bg-white dark:bg-gray-800/50 border-gray-100 dark:border-gray-700/50">
-            <CardHeader 
-              className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors rounded-t-2xl"
+          <div className="glass-dark rounded-2xl glow-green overflow-hidden">
+            <div 
+              className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-700/30 transition-colors border-b border-slate-700/50"
               onClick={() => toggleSection('trends')}
             >
-              <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white text-base md:text-lg">
-                <span className="flex items-center gap-2">
-                  <span>📈</span>
-                  <span className="hidden sm:inline">Monthly Trends</span>
-                  <span className="sm:hidden">Trends</span>
-                </span>
-                {collapsedSections['trends'] ? (
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <ChevronUp className="h-5 w-5 text-gray-400" />
-                )}
-              </CardTitle>
-            </CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <span className="text-lg">📈</span>
+                </div>
+                <h3 className="text-lg font-bold text-white">Monthly Trends</h3>
+              </div>
+              {collapsedSections['trends'] ? (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronUp className="h-5 w-5 text-slate-400" />
+              )}
+            </div>
             {!collapsedSections['trends'] && (
-              <CardContent className="pt-0">
-                <div className="h-56 md:h-64">
+              <div className="px-5 pb-5 pt-3">
+                <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyTrendsData} margin={{ left: -10, right: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(100, 116, 139, 0.2)" />
                       <XAxis 
                         dataKey="month" 
-                        tick={{ fontSize: 10 }}
+                        tick={{ fontSize: 10, fill: '#94a3b8' }}
                         tickLine={false}
-                        axisLine={{ stroke: '#e5e7eb' }}
+                        axisLine={{ stroke: 'rgba(100, 116, 139, 0.3)' }}
                       />
                       <YAxis 
-                        tick={{ fontSize: 10 }}
+                        tick={{ fontSize: 10, fill: '#94a3b8' }}
                         tickFormatter={formatShortCurrency}
                         tickLine={false}
-                        axisLine={{ stroke: '#e5e7eb' }}
-                        width={45}
+                        axisLine={{ stroke: 'rgba(100, 116, 139, 0.3)' }}
+                        width={50}
                       />
                       <Tooltip 
                         formatter={(value, name) => [formatCurrency(value as number), name]}
                         contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: '1px solid #e5e7eb',
+                          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
                           borderRadius: '12px',
-                          fontSize: '12px'
+                          color: '#fff',
+                          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
                         }}
+                        labelStyle={{ color: '#94a3b8' }}
                       />
-                      <Legend wrapperStyle={{ fontSize: '12px' }} />
-                      <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} name="Income" />
-                      <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} name="Expenses" />
-                      <Line type="monotone" dataKey="savings" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} name="Savings" />
+                      <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />
+                      <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} dot={{ r: 5, fill: '#10b981', stroke: '#064e3b', strokeWidth: 2 }} activeDot={{ r: 7 }} name="Income" />
+                      <Line type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={3} dot={{ r: 5, fill: '#ef4444', stroke: '#7f1d1d', strokeWidth: 2 }} activeDot={{ r: 7 }} name="Expenses" />
+                      <Line type="monotone" dataKey="savings" stroke="#3b82f6" strokeWidth={3} dot={{ r: 5, fill: '#3b82f6', stroke: '#1e3a8a', strokeWidth: 2 }} activeDot={{ r: 7 }} name="Savings" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
-              </CardContent>
+              </div>
             )}
-          </Card>
+          </div>
         )}
       </div>
 
       {/* Advance Tax Insights - Dynamic Fiscal Year */}
       {summary.taxDeductions && summary.taxDeductions.monthlyBreakdown.length > 0 && (
-        <Card className="bg-white dark:bg-gray-800/50 border-gray-100 dark:border-gray-700/50">
-          <CardHeader 
-            className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors rounded-t-2xl"
+        <div className="glass-dark rounded-2xl glow-amber overflow-hidden">
+          <div 
+            className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-700/30 transition-colors border-b border-slate-700/50"
             onClick={() => toggleSection('advanceTax')}
           >
-            <CardTitle className="flex items-center justify-between text-gray-900 dark:text-white text-base md:text-lg">
-              <span className="flex items-center gap-2">
-                <span>💰</span>
-                <span className="hidden sm:inline">Advance Tax ({taxFiscalYear})</span>
-                <span className="sm:hidden">Tax</span>
-              </span>
-              {collapsedSections['advanceTax'] ? (
-                <ChevronDown className="h-5 w-5 text-gray-400" />
-              ) : (
-                <ChevronUp className="h-5 w-5 text-gray-400" />
-              )}
-            </CardTitle>
-          </CardHeader>
-          {!collapsedSections['advanceTax'] && (
-            <CardContent className="pt-0">
-              <div className="mb-4 p-3 md:p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl border border-amber-100 dark:border-amber-800/50">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
-                  <h4 className="text-sm md:text-base font-semibold text-amber-800 dark:text-amber-200">Total Advance Tax</h4>
-                  <span className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(summary.taxDeductions.total)}</span>
-                </div>
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  {taxFiscalYear} • {summary.taxDeductions.monthlyBreakdown.length} installment{summary.taxDeductions.monthlyBreakdown.length > 1 ? 's' : ''}
-                </p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+                <span className="text-lg">💰</span>
               </div>
-              <div className="h-48 md:h-64">
+              <h3 className="text-lg font-bold text-white">Advance Tax ({taxFiscalYear})</h3>
+            </div>
+            {collapsedSections['advanceTax'] ? (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronUp className="h-5 w-5 text-slate-400" />
+            )}
+          </div>
+          {!collapsedSections['advanceTax'] && (
+            <div className="px-5 pb-5 pt-3 space-y-4">
+              {/* Tax Summary Card */}
+              <div className="group relative overflow-hidden bg-gradient-to-br from-amber-900/50 to-orange-900/40 rounded-xl p-5 border border-amber-500/30 hover-lift">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/20 rounded-full blur-3xl group-hover:bg-amber-500/30 transition-colors"></div>
+                <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-300">Total Advance Tax</h4>
+                    <p className="text-xs text-amber-400/70 mt-1">
+                      {taxFiscalYear} • {summary.taxDeductions.monthlyBreakdown.length} installment{summary.taxDeductions.monthlyBreakdown.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <span className="text-3xl md:text-4xl font-black text-white">{formatCurrency(summary.taxDeductions.total)}</span>
+                </div>
+              </div>
+              
+              {/* Tax Bar Chart */}
+              <div className="h-56 md:h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={summary.taxDeductions.monthlyBreakdown} margin={{ left: -10, right: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-600" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(100, 116, 139, 0.2)" />
                     <XAxis 
                       dataKey="month" 
-                      tick={{ fontSize: 10 }}
+                      tick={{ fontSize: 10, fill: '#94a3b8' }}
                       tickLine={false}
-                      axisLine={{ stroke: '#e5e7eb' }}
+                      axisLine={{ stroke: 'rgba(100, 116, 139, 0.3)' }}
                     />
                     <YAxis 
-                      tick={{ fontSize: 10 }}
+                      tick={{ fontSize: 10, fill: '#94a3b8' }}
                       tickFormatter={formatShortCurrency}
                       tickLine={false}
-                      axisLine={{ stroke: '#e5e7eb' }}
-                      width={45}
+                      axisLine={{ stroke: 'rgba(100, 116, 139, 0.3)' }}
+                      width={50}
                     />
                     <Tooltip 
                       formatter={(value) => [formatCurrency(value as number), 'Advance Tax']}
                       contentStyle={{
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                        border: '1px solid #e5e7eb',
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        border: '1px solid rgba(245, 158, 11, 0.3)',
                         borderRadius: '12px',
-                        fontSize: '12px'
+                        color: '#fff',
+                        boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
                       }}
                     />
-                    <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+                      {summary.taxDeductions.monthlyBreakdown.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${38 + index * 3}, 95%, ${60 - index * 2}%)`} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
+            </div>
           )}
-        </Card>
+        </div>
       )}
     </div>
   )

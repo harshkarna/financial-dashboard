@@ -213,9 +213,9 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
           
           <div className="flex items-center gap-3">
             <Calendar className="w-5 h-5 text-gray-400 hidden sm:block" />
-            <select
-              value={selectedYear || ''}
-              onChange={(e) => handleYearChange(e.target.value)}
+          <select
+            value={selectedYear || ''}
+            onChange={(e) => handleYearChange(e.target.value)}
               className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-xl px-4 py-2.5 pr-10 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -223,14 +223,14 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
                 backgroundPosition: 'right 0.75rem center',
                 backgroundSize: '1rem'
               }}
-            >
-              <option value="">All Years</option>
-              {data.availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
+          >
+            <option value="">All Years</option>
+            {data.availableYears.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
         </div>
+      </div>
 
         {/* Summary Cards - 2x2 on mobile, 4 columns on desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 stagger-children">
@@ -247,8 +247,8 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
                 <div className="relative">
                   <div className={`inline-flex items-center justify-center w-10 h-10 rounded-xl ${card.iconBg} mb-3`}>
                     <Icon className={`w-5 h-5 ${card.textColor}`} />
-                  </div>
-                  
+        </div>
+
                   <p className="text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
                   
                   {/* Show full amount on desktop, short on mobile */}
@@ -260,28 +260,28 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
                   {card.subtitle && (
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{card.subtitle}</p>
                   )}
-                </div>
-              </div>
+            </div>
+          </div>
             )
           })}
-        </div>
+      </div>
 
-        {/* Financial Insights */}
-        <EarningsInsights 
-          data={yearData} 
-          selectedYear={selectedYear} 
-          allData={allData?.earnings || []} 
-        />
+      {/* Financial Insights */}
+      <EarningsInsights 
+        data={yearData} 
+        selectedYear={selectedYear} 
+        allData={allData?.earnings || []} 
+      />
 
-        {/* Monthly Breakdown Table */}
+      {/* Monthly Breakdown Table */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <button
             onClick={() => setShowTable(!showTable)}
             className="w-full flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           >
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Monthly Breakdown {selectedYear ? `• ${selectedYear}` : '• All Years'}
-            </h2>
+          </h2>
             {showTable ? (
               <ChevronUp className="w-5 h-5 text-gray-400" />
             ) : (
@@ -328,12 +328,12 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
                     </div>
                   </div>
                 ))}
-              </div>
+        </div>
 
               {/* Desktop Table View */}
               <table className="hidden md:table min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-700/50">
-                  <tr>
+              <tr>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Month</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Income</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Expenditure</th>
@@ -341,10 +341,10 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Investment</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Saving %</th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Invest %</th>
-                  </tr>
-                </thead>
+              </tr>
+            </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {yearData.map((record, index) => (
+              {yearData.map((record, index) => (
                     <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{record.month}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-emerald-600 dark:text-emerald-400 font-medium">{formatCurrency(record.income)}</td>
@@ -356,23 +356,23 @@ export function EarningsBreakdown({ session }: EarningsBreakdownProps) {
                           record.savingPercent > 30 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                           record.savingPercent > 15 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                           'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
-                          {record.savingPercent.toFixed(1)}%
-                        </span>
-                      </td>
+                    }`}>
+                      {record.savingPercent.toFixed(1)}%
+                    </span>
+                  </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${
                           record.investPercent > 50 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
                           record.investPercent > 25 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                           'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                        }`}>
-                          {record.investPercent.toFixed(1)}%
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                    }`}>
+                      {record.investPercent.toFixed(1)}%
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
             </div>
           )}
         </div>

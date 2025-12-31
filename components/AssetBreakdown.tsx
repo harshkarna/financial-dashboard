@@ -89,12 +89,12 @@ export function AssetBreakdown({ title, items, type }: AssetBreakdownProps) {
             `}>
               <Icon className="h-5 w-5 md:h-6 md:w-6 text-white" />
             </div>
-            <div>
+        <div>
               <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {isPositive ? 'What you own' : 'What you owe'}
-              </p>
-            </div>
+          </p>
+        </div>
           </div>
           
           <div className={`
@@ -107,22 +107,22 @@ export function AssetBreakdown({ title, items, type }: AssetBreakdownProps) {
             <p className={`text-base md:text-lg font-bold ${isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
               <span className="md:hidden">{formatShort(total)}</span>
               <span className="hidden md:inline">{formatCurrency(total)}</span>
-            </p>
-          </div>
+          </p>
         </div>
+      </div>
 
         {/* Categories */}
         <div className="space-y-2 md:space-y-3">
-          {Object.entries(groupedItems).map(([categoryType, typeItems]) => {
+        {Object.entries(groupedItems).map(([categoryType, typeItems]) => {
             const isCollapsed = collapsedCategories[categoryType] ?? true
-            const categoryTotal = typeItems.reduce((sum, item) => {
-              if (title === 'Assets' && excludedItems.includes(item.item)) {
-                return sum
-              }
-              return sum + item.amount
-            }, 0)
+          const categoryTotal = typeItems.reduce((sum, item) => {
+            if (title === 'Assets' && excludedItems.includes(item.item)) {
+              return sum
+            }
+            return sum + item.amount
+          }, 0)
 
-            return (
+          return (
               <div 
                 key={categoryType} 
                 className={`
@@ -137,16 +137,16 @@ export function AssetBreakdown({ title, items, type }: AssetBreakdownProps) {
                   className="w-full flex items-center justify-between p-3 md:p-4 transition-colors"
                   onClick={() => toggleCategory(categoryType)}
                 >
-                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                     <div className={`
                       w-1 h-6 rounded-full
                       ${isPositive ? 'bg-emerald-400' : 'bg-red-400'}
                     `} />
-                    {isCollapsed ? (
+                      {isCollapsed ? (
                       <ChevronDown className="h-4 w-4 text-gray-400" />
-                    ) : (
+                      ) : (
                       <ChevronUp className="h-4 w-4 text-gray-400" />
-                    )}
+                      )}
                     <span className="text-sm font-semibold text-gray-800 dark:text-white">
                       {categoryType}
                     </span>
@@ -184,9 +184,9 @@ export function AssetBreakdown({ title, items, type }: AssetBreakdownProps) {
                     </div>
                   </div>
                 )}
-              </div>
-            )
-          })}
+            </div>
+          )
+        })}
         </div>
       </div>
     </div>

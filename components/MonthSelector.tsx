@@ -67,10 +67,10 @@ export function MonthSelector({ months, selectedMonth, onMonthChange }: MonthSel
               </option>
               {months.slice(6).map((month) => (
                 <option key={month} value={month} className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                  {month}
-                </option>
-              ))}
-            </select>
+              {month}
+            </option>
+          ))}
+        </select>
           </div>
         )}
       </div>

@@ -164,21 +164,21 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
         {/* Assets and Liabilities - Stack on mobile, side by side on desktop */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <AssetBreakdown 
-              title="Assets" 
-              items={data?.assets || []} 
-              type="positive"
-            />
+          <AssetBreakdown 
+            title="Assets" 
+            items={data?.assets || []} 
+            type="positive"
+          />
           </div>
           <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <AssetBreakdown 
-              title="Liabilities" 
-              items={data?.liabilities || []} 
-              type="negative"
-            />
+          <AssetBreakdown 
+            title="Liabilities" 
+            items={data?.liabilities || []} 
+            type="negative"
+          />
           </div>
         </div>
-      </div>
+        </div>
     </div>
   )
 }
