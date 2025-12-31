@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { TrendingUp, TrendingDown, Target, Sparkles, Trophy, Star, Clock, Calendar, X } from 'lucide-react'
+import { TrendingUp, TrendingDown, Target, Sparkles, Trophy, Star, Clock, X } from 'lucide-react'
 
 interface NetWorthCardProps {
   netWorth: number
@@ -80,7 +80,6 @@ function CelebrationModal({
 
   useEffect(() => {
     setMounted(true)
-    // Prevent body scroll when modal is open
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = 'unset'
@@ -132,7 +131,6 @@ function CelebrationModal({
         className="celebration-card"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
@@ -140,24 +138,20 @@ function CelebrationModal({
           <X className="w-5 h-5 text-white/70" />
         </button>
 
-        {/* Trophy */}
         <div className="celebration-trophy">
           <Trophy className="w-16 h-16 text-yellow-400" />
         </div>
 
-        {/* Decorative Icons */}
         <div className="flex justify-center gap-3 mb-2">
           <span className="text-3xl celebration-bounce" style={{ animationDelay: '0s' }}>🎊</span>
           <span className="text-3xl celebration-bounce" style={{ animationDelay: '0.1s' }}>🏆</span>
           <span className="text-3xl celebration-bounce" style={{ animationDelay: '0.2s' }}>🎊</span>
         </div>
 
-        {/* Title */}
         <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-pink-400 bg-clip-text text-transparent mb-4">
           Congratulations!
         </h2>
 
-        {/* Achievement */}
         <p className="text-gray-300 text-lg mb-2">You've reached</p>
         <div className="flex items-center justify-center gap-3 mb-2">
           <span className="text-5xl">{milestone.emoji}</span>
@@ -173,7 +167,6 @@ function CelebrationModal({
         </div>
         <p className="text-gray-400 text-lg mb-6">Net Worth Milestone!</p>
 
-        {/* Journey Info */}
         {milestoneInfo && (
           <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-2xl p-4 mb-4 border border-emerald-500/30">
             <p className="text-emerald-300 font-semibold">
@@ -191,7 +184,6 @@ function CelebrationModal({
           </div>
         )}
 
-        {/* Next Target */}
         {nextMilestone && (
           <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl p-4 mb-6 border border-blue-500/30">
             <p className="text-blue-300 font-semibold">
@@ -203,7 +195,6 @@ function CelebrationModal({
           </div>
         )}
 
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white font-bold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 transition-all"
@@ -222,8 +213,8 @@ function CelebrationModal({
 // LocalStorage keys for tracking celebrated milestones
 const CELEBRATED_MILESTONE_KEY = 'net-worth-celebrated-milestone'
 const MILESTONE_ACHIEVED_DATE_KEY = 'net-worth-milestone-achieved-date'
-const CELEBRATION_DURATION_MS = 60000 // 1 minute (60 seconds)
-const CELEBRATION_PERIOD_DAYS = 30 // Show celebration for 30 days after milestone
+const CELEBRATION_DURATION_MS = 60000
+const CELEBRATION_PERIOD_DAYS = 30
 
 export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
   const [showCelebration, setShowCelebration] = useState(false)
@@ -239,11 +230,9 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     maximumFractionDigits: 0,
   }).format(Math.abs(netWorth))
 
-  // Find current and next milestone
   const currentMilestone = MILESTONES.filter(m => netWorth >= m.value).pop()
   const nextMilestone = MILESTONES.find(m => netWorth < m.value)
   
-  // Calculate progress to next milestone
   const previousMilestoneValue = currentMilestone?.value || 0
   const nextMilestoneValue = nextMilestone?.value || MILESTONES[MILESTONES.length - 1].value
   const progressToNext = nextMilestone 
@@ -251,7 +240,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     : 100
   const amountToNext = nextMilestone ? nextMilestoneValue - netWorth : 0
 
-  // Format large numbers
   const formatShort = (amount: number) => {
     if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)} Cr`
     if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`
@@ -259,20 +247,15 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     return `₹${amount}`
   }
 
-  // Fetch historical data for milestone timeline calculation
   useEffect(() => {
     const fetchHistoricalData = async () => {
       try {
         setLoadingHistory(true)
-        
-        // Get all available months
         const monthsResponse = await fetch('/api/months')
         if (!monthsResponse.ok) throw new Error('Failed to fetch months')
         
         const monthsData = await monthsResponse.json()
         const availableMonths = monthsData.months || []
-        
-        // Fetch net worth for all months (reversed to get chronological order)
         const allMonths = [...availableMonths].reverse()
         
         const dataPromises = allMonths.map(async (m: string) => {
@@ -286,8 +269,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
         
         const results = await Promise.all(dataPromises)
         setHistoricalData(results)
-        
-        // Calculate milestone timelines
         calculateMilestoneTimelines(results)
       } catch (error) {
         console.error('Error fetching historical data:', error)
@@ -299,7 +280,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     fetchHistoricalData()
   }, [])
 
-  // Calculate when each milestone was reached
   const calculateMilestoneTimelines = (data: HistoricalData[]) => {
     const timelines: MilestoneInfo[] = []
     let previousMilestoneDate: { month: number; year: number } | null = null
@@ -307,8 +287,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     
     for (let i = 0; i < MILESTONES.length; i++) {
       const milestone = MILESTONES[i]
-      
-      // Find first month where net worth crossed milestone
       const crossingIndex = data.findIndex(d => d.netWorth >= milestone.value)
       
       if (crossingIndex !== -1) {
@@ -320,7 +298,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
           let journeyStart: string
           
           if (i === 0) {
-            // First milestone (1 Crore): Calculate from career start
             monthsToReach = calculateMonthsBetween(
               CAREER_START.month, 
               CAREER_START.year, 
@@ -329,7 +306,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
             )
             journeyStart = CAREER_START.label
           } else if (previousMilestoneDate) {
-            // Subsequent milestones: Calculate from previous milestone
             monthsToReach = calculateMonthsBetween(
               previousMilestoneDate.month,
               previousMilestoneDate.year,
@@ -345,11 +321,10 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
           timelines.push({
             milestone,
             achievedMonth: achievedMonthStr,
-            monthsToReach: Math.max(1, monthsToReach), // At least 1 month
+            monthsToReach: Math.max(1, monthsToReach),
             journeyStart
           })
           
-          // Update for next milestone
           previousMilestoneDate = achievedDate
           previousMilestoneLabel = achievedMonthStr
         }
@@ -359,36 +334,28 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     setMilestoneTimelines(timelines)
   }
 
-  // Trigger celebration for 1 month after reaching a milestone
   useEffect(() => {
     if (!currentMilestone) return
     
-    // Get stored milestone data
     const storedMilestoneValue = localStorage.getItem(CELEBRATED_MILESTONE_KEY)
     const storedAchievedDate = localStorage.getItem(MILESTONE_ACHIEVED_DATE_KEY)
     const lastCelebratedValue = storedMilestoneValue ? parseInt(storedMilestoneValue) : 0
     
     const now = new Date()
     
-    // Check if this is a NEW milestone (higher than last celebrated)
     if (currentMilestone.value > lastCelebratedValue) {
-      // New milestone reached! Save milestone and current date
       localStorage.setItem(CELEBRATED_MILESTONE_KEY, currentMilestone.value.toString())
       localStorage.setItem(MILESTONE_ACHIEVED_DATE_KEY, now.toISOString())
-      
-      // Show celebration
       setShowCelebration(true)
       const timer = setTimeout(() => setShowCelebration(false), CELEBRATION_DURATION_MS)
       return () => clearTimeout(timer)
     }
     
-    // Check if we're still within the celebration period (30 days)
     if (currentMilestone.value === lastCelebratedValue && storedAchievedDate) {
       const achievedDate = new Date(storedAchievedDate)
       const daysSinceAchieved = Math.floor((now.getTime() - achievedDate.getTime()) / (1000 * 60 * 60 * 24))
       
       if (daysSinceAchieved <= CELEBRATION_PERIOD_DAYS) {
-        // Still within celebration period - show celebration for 1 minute
         setShowCelebration(true)
         const timer = setTimeout(() => setShowCelebration(false), CELEBRATION_DURATION_MS)
         return () => clearTimeout(timer)
@@ -396,11 +363,212 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
     }
   }, [currentMilestone])
 
-  // Generate insights including milestone timelines
+  return (
+    <>
+      {showCelebration && currentMilestone && (
+        <CelebrationModal
+          milestone={currentMilestone}
+          nextMilestone={nextMilestone}
+          milestoneInfo={milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)}
+          amountToNext={amountToNext}
+          onClose={() => setShowCelebration(false)}
+          formatShort={formatShort}
+        />
+      )}
+
+      {/* Main Net Worth Card - Premium Dark Theme */}
+      <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-900/50 to-green-900/40 rounded-2xl p-5 border border-emerald-500/30 glow-green hover-lift">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl"></div>
+        
+        <div className="relative">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                {isPositive ? (
+                  <TrendingUp className="h-5 w-5 text-white" />
+                ) : (
+                  <TrendingDown className="h-5 w-5 text-white" />
+                )}
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                  Net Worth
+                  {currentMilestone && (
+                    <span className="text-xl" title={`${currentMilestone.label} achieved!`}>
+                      {currentMilestone.emoji}
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-emerald-400/70">{month}</p>
+              </div>
+            </div>
+            <div className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+              isPositive 
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+            }`}>
+              {currentMilestone && <Star className="h-3 w-3" />}
+              {isPositive ? 'Positive' : 'Negative'}
+            </div>
+          </div>
+          
+          {/* Net Worth Amount */}
+          <div className="bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-700/50">
+            <p className={`text-4xl font-black ${
+              isPositive ? 'text-emerald-400' : 'text-red-400'
+            }`}>
+              {!isPositive && '-'}{formattedAmount}
+            </p>
+          </div>
+          
+          {/* Progress to Next Milestone */}
+          {nextMilestone && (
+            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm font-medium text-slate-300">
+                    Next: {nextMilestone.label} {nextMilestone.emoji}
+                  </span>
+                </div>
+                <span className="text-sm font-bold text-blue-400">
+                  {Math.round(progressToNext)}%
+                </span>
+              </div>
+              
+              <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out relative"
+                  style={{ width: `${Math.min(progressToNext, 100)}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-shimmer" />
+                </div>
+              </div>
+              
+              <p className="text-xs text-slate-500 mt-2 text-center">
+                {formatShort(amountToNext)} more to go!
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// Separate Insights Card Component
+interface NetWorthInsightsProps {
+  netWorth: number
+}
+
+export function NetWorthInsights({ netWorth }: NetWorthInsightsProps) {
+  const [historicalData, setHistoricalData] = useState<HistoricalData[]>([])
+  const [milestoneTimelines, setMilestoneTimelines] = useState<MilestoneInfo[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const currentMilestone = MILESTONES.filter(m => netWorth >= m.value).pop()
+  const nextMilestone = MILESTONES.find(m => netWorth < m.value)
+  const amountToNext = nextMilestone ? nextMilestone.value - netWorth : 0
+
+  const formatShort = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)} Cr`
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`
+    if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`
+    return `₹${amount}`
+  }
+
+  useEffect(() => {
+    const fetchHistoricalData = async () => {
+      try {
+        setLoading(true)
+        const monthsResponse = await fetch('/api/months')
+        if (!monthsResponse.ok) throw new Error('Failed to fetch months')
+        
+        const monthsData = await monthsResponse.json()
+        const availableMonths = monthsData.months || []
+        const allMonths = [...availableMonths].reverse()
+        
+        const dataPromises = allMonths.map(async (m: string) => {
+          const response = await fetch(`/api/sheets?month=${encodeURIComponent(m)}`)
+          if (response.ok) {
+            const data = await response.json()
+            return { month: m, netWorth: data.netWorth || 0 }
+          }
+          return { month: m, netWorth: 0 }
+        })
+        
+        const results = await Promise.all(dataPromises)
+        setHistoricalData(results)
+        calculateMilestoneTimelines(results)
+      } catch (error) {
+        console.error('Error fetching historical data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchHistoricalData()
+  }, [])
+
+  const calculateMilestoneTimelines = (data: HistoricalData[]) => {
+    const timelines: MilestoneInfo[] = []
+    let previousMilestoneDate: { month: number; year: number } | null = null
+    let previousMilestoneLabel = CAREER_START.label
+    
+    for (let i = 0; i < MILESTONES.length; i++) {
+      const milestone = MILESTONES[i]
+      const crossingIndex = data.findIndex(d => d.netWorth >= milestone.value)
+      
+      if (crossingIndex !== -1) {
+        const achievedMonthStr = data[crossingIndex].month
+        const achievedDate = parseMonth(achievedMonthStr)
+        
+        if (achievedDate) {
+          let monthsToReach: number
+          let journeyStart: string
+          
+          if (i === 0) {
+            monthsToReach = calculateMonthsBetween(
+              CAREER_START.month, 
+              CAREER_START.year, 
+              achievedDate.month, 
+              achievedDate.year
+            )
+            journeyStart = CAREER_START.label
+          } else if (previousMilestoneDate) {
+            monthsToReach = calculateMonthsBetween(
+              previousMilestoneDate.month,
+              previousMilestoneDate.year,
+              achievedDate.month,
+              achievedDate.year
+            )
+            journeyStart = previousMilestoneLabel
+          } else {
+            monthsToReach = crossingIndex + 1
+            journeyStart = 'Start'
+          }
+          
+          timelines.push({
+            milestone,
+            achievedMonth: achievedMonthStr,
+            monthsToReach: Math.max(1, monthsToReach),
+            journeyStart
+          })
+          
+          previousMilestoneDate = achievedDate
+          previousMilestoneLabel = achievedMonthStr
+        }
+      }
+    }
+    
+    setMilestoneTimelines(timelines)
+  }
+
+  // Generate insights
   const generateInsights = () => {
     const insights: { icon: string; text: string; highlight?: boolean }[] = []
     
-    // Milestone achievement with timeline
     if (currentMilestone) {
       const milestoneInfo = milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)
       if (milestoneInfo) {
@@ -410,7 +578,6 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
           highlight: true
         })
         
-        // Add journey time
         if (milestoneInfo.monthsToReach > 1) {
           const years = Math.floor(milestoneInfo.monthsToReach / 12)
           const months = milestoneInfo.monthsToReach % 12
@@ -430,14 +597,12 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
       }
     }
 
-    // Progress to next milestone
     if (nextMilestone) {
       insights.push({
         icon: '🎯',
         text: `${formatShort(amountToNext)} away from ${nextMilestone.label}`
       })
       
-      // Estimate time to next milestone based on recent growth
       if (historicalData.length >= 3) {
         const recent = historicalData.slice(-3)
         const avgMonthlyGrowth = (recent[recent.length - 1].netWorth - recent[0].netWorth) / (recent.length - 1)
@@ -464,12 +629,10 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
       }
     }
 
-    // Net worth tier insight
     if (netWorth >= 10000000) {
       insights.push({ icon: '👑', text: 'Crorepati Club Member!' })
     }
 
-    // Monthly growth insight
     if (historicalData.length >= 2) {
       const lastMonth = historicalData[historicalData.length - 1]
       const prevMonth = historicalData[historicalData.length - 2]
@@ -484,175 +647,98 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
       }
     }
 
-    return insights.slice(0, 4)
+    return insights.slice(0, 5)
   }
 
   const insights = generateInsights()
 
-  return (
-    <>
-      {/* Celebration Modal - Uses Portal to render at document root */}
-      {showCelebration && currentMilestone && (
-        <CelebrationModal
-          milestone={currentMilestone}
-          nextMilestone={nextMilestone}
-          milestoneInfo={milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)}
-          amountToNext={amountToNext}
-          onClose={() => setShowCelebration(false)}
-          formatShort={formatShort}
-        />
-      )}
+  if (loading) {
+    return (
+      <div className="glass-dark rounded-2xl p-5 glow-amber animate-pulse">
+        <div className="h-6 bg-slate-700/50 rounded w-1/2 mb-4"></div>
+        <div className="space-y-3">
+          <div className="h-10 bg-slate-700/50 rounded"></div>
+          <div className="h-10 bg-slate-700/50 rounded"></div>
+          <div className="h-10 bg-slate-700/50 rounded"></div>
+        </div>
+      </div>
+    )
+  }
 
-      <div className="relative bg-gradient-to-br from-white to-green-50 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6 border border-green-100 dark:border-gray-600 transition-colors duration-200 overflow-hidden">
-      
-      <div>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-        <div>
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
-              Net Worth
-              {currentMilestone && (
-                <span className="text-2xl" title={`${currentMilestone.label} achieved!`}>
-                  {currentMilestone.emoji}
-                </span>
-              )}
-            </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Current financial position</p>
+  return (
+    <div className="glass-dark rounded-2xl p-5 glow-amber">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+          <Sparkles className="h-5 w-5 text-white" />
         </div>
-        <div className={`p-3 rounded-full ${isPositive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-          {isPositive ? (
-            <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-          ) : (
-            <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
-          )}
-        </div>
+        <h3 className="text-lg font-bold text-white">Wealth Insights</h3>
       </div>
-      
-        {/* Net Worth Amount */}
-      <div className="space-y-3">
-          <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border border-gray-100 dark:border-gray-600">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{month}</p>
-          <p className={`text-4xl font-bold ${
-            isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-          }`}>
-            {!isPositive && '-'}{formattedAmount}
-          </p>
-        </div>
-      </div>
-      
-        {/* Progress to Next Milestone */}
-        {nextMilestone && (
-          <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Next: {nextMilestone.label} {nextMilestone.emoji}
-                </span>
-              </div>
-              <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                {Math.round(progressToNext)}%
+
+      {/* Insights List */}
+      {insights.length > 0 ? (
+        <div className="space-y-2">
+          {insights.map((insight, idx) => (
+            <div 
+              key={idx}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
+                insight.highlight 
+                  ? 'bg-gradient-to-r from-emerald-900/40 to-green-900/30 border border-emerald-500/30' 
+                  : 'bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30'
+              }`}
+            >
+              <span className="text-xl">{insight.icon}</span>
+              <span className={`text-sm ${insight.highlight ? 'text-emerald-300 font-semibold' : 'text-slate-300'}`}>
+                {insight.text}
               </span>
             </div>
-            
-            {/* Progress Bar */}
-            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 overflow-hidden">
-              <div 
-                className="h-full rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out relative"
-                style={{ width: `${Math.min(progressToNext, 100)}%` }}
-              >
-                <div className="absolute inset-0 bg-white/20 animate-shimmer" />
-              </div>
-            </div>
-            
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-              {formatShort(amountToNext)} more to go!
-            </p>
-          </div>
-        )}
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-slate-400 text-sm">Loading insights...</p>
+        </div>
+      )}
 
-        {/* Milestone Timeline */}
-        {milestoneTimelines.length > 0 && (
-          <div className="mt-4 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg border border-amber-100 dark:border-amber-800">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Milestone Journey</span>
-            </div>
-            <div className="space-y-2">
-              {milestoneTimelines.map((info, idx) => {
-                const years = Math.floor(info.monthsToReach / 12)
-                const months = info.monthsToReach % 12
-                let timeText = ''
-                if (years > 0 && months > 0) {
-                  timeText = `${years}y ${months}m`
-                } else if (years > 0) {
-                  timeText = `${years}y`
-                } else {
-                  timeText = `${months}m`
-                }
-                
-                return (
-                  <div key={idx} className="bg-white/50 dark:bg-gray-700/50 rounded-md p-2">
-                    <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-lg">{info.milestone.emoji}</span>
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{info.milestone.label}</span>
-                      </span>
-                      <span className="text-sm font-bold text-amber-600 dark:text-amber-400">{info.achievedMonth}</span>
-                    </div>
-                    <div className="flex items-center justify-between mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      <span>From {info.journeyStart}</span>
-                      <span className="font-medium text-green-600 dark:text-green-400">⏱️ {timeText}</span>
-                    </div>
+      {/* Milestone Journey */}
+      {milestoneTimelines.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-slate-700/50">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="h-4 w-4 text-amber-400" />
+            <span className="text-sm font-semibold text-slate-300">Milestone Journey</span>
+          </div>
+          <div className="space-y-2">
+            {milestoneTimelines.map((info, idx) => {
+              const years = Math.floor(info.monthsToReach / 12)
+              const months = info.monthsToReach % 12
+              let timeText = ''
+              if (years > 0 && months > 0) {
+                timeText = `${years}y ${months}m`
+              } else if (years > 0) {
+                timeText = `${years}y`
+              } else {
+                timeText = `${months}m`
+              }
+              
+              return (
+                <div key={idx} className="bg-slate-700/30 rounded-lg p-2.5 border border-slate-600/30">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <span className="text-lg">{info.milestone.emoji}</span>
+                      <span className="text-sm font-medium text-white">{info.milestone.label}</span>
+                    </span>
+                    <span className="text-sm font-bold text-amber-400">{info.achievedMonth}</span>
                   </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Insights */}
-        {insights.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              <Sparkles className="h-3 w-3" />
-              Insights
-            </div>
-            <div className="space-y-1">
-              {insights.map((insight, idx) => (
-                <div 
-                  key={idx}
-                  className={`flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 rounded-md px-2 py-1 ${
-                    insight.highlight 
-                      ? 'bg-green-100/70 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
-                      : 'bg-white/50 dark:bg-gray-700/50'
-                  }`}
-                >
-                  <span>{insight.icon}</span>
-                  <span>{insight.text}</span>
+                  <div className="flex items-center justify-between mt-1 text-xs text-slate-500">
+                    <span>From {info.journeyStart}</span>
+                    <span className="font-medium text-emerald-400">⏱️ {timeText}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Footer */}
-        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-600">
-        <div className="flex justify-between items-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Last updated: {new Date().toLocaleDateString('en-IN')}
-          </p>
-            <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
-            isPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-          }`}>
-              {currentMilestone && <Star className="h-3 w-3" />}
-            {isPositive ? 'Positive' : 'Negative'}
-            </div>
+              )
+            })}
           </div>
         </div>
-      </div>
-
-</div>
-    </>
+      )}
+    </div>
   )
 }

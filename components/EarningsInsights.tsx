@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { TrendingUp, TrendingDown, Target, Zap, Award, BarChart3 } from 'lucide-react'
 
 interface EarningRecord {
   month: string
@@ -44,58 +45,43 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
     // Sort by year and month for chronological analysis
     const sortedData = [...data].sort((a, b) => {
       if (a.year !== b.year) return a.year - b.year
-      // Convert month names to numbers for proper sorting
       const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       const aMonth = monthOrder.indexOf(a.monthName) || 0
       const bMonth = monthOrder.indexOf(b.monthName) || 0
       return aMonth - bMonth
     })
 
-    // Filter out incomplete/future months (only include months with meaningful data)
+    // Filter out incomplete/future months
     const currentDate = new Date()
     const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth() // 0-11
+    const currentMonth = currentDate.getMonth()
     
     const completeData = sortedData.filter(record => {
-      // If it's a past year, include all months
       if (record.year < currentYear) return true
-      
-      // If it's current year, only include months up to current month
       if (record.year === currentYear) {
         const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         const recordMonth = monthOrder.indexOf(record.monthName)
         return recordMonth <= currentMonth
       }
-      
-      // If it's future year, exclude
       return false
     })
 
-    // Also filter out months with zero or very low income (likely incomplete)
-    const filteredData = completeData.filter(record => record.income > 1000) // Minimum threshold for complete data
+    const filteredData = completeData.filter(record => record.income > 1000)
 
-    // Return null if no valid data after filtering
-    if (filteredData.length === 0) {
-      return null
-    }
+    if (filteredData.length === 0) return null
 
-    // Last 6 months analysis (from filtered complete data)
     const last6Months = filteredData.slice(-6)
     const last3Months = filteredData.slice(-3)
     
-    // Income growth analysis (only if we have enough data)
     let incomeGrowth = 0
     if (last6Months.length >= 6) {
       const firstPeriod = last6Months.slice(0, 3)
       const secondPeriod = last6Months.slice(3, 6)
-      
       const firstPeriodIncome = firstPeriod.reduce((sum, r) => sum + r.income, 0)
       const secondPeriodIncome = secondPeriod.reduce((sum, r) => sum + r.income, 0)
-      
       incomeGrowth = firstPeriodIncome > 0 ? ((secondPeriodIncome - firstPeriodIncome) / firstPeriodIncome) * 100 : 0
     }
 
-    // Best and worst months (from complete data only) - use first element as initial value
     const bestMonth = filteredData.reduce((best, current) => 
       (current.income - current.expenditure) > (best.income - best.expenditure) ? current : best,
       filteredData[0]
@@ -105,29 +91,22 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
       filteredData[0]
     )
 
-    // Consistency analysis (using filtered data)
     const avgSavingPercent = filteredData.reduce((sum, r) => sum + r.savingPercent, 0) / filteredData.length
     const avgInvestPercent = filteredData.reduce((sum, r) => sum + r.investPercent, 0) / filteredData.length
-    
-    // Calculate actual average amounts
     const avgSavingAmount = filteredData.reduce((sum, r) => sum + r.saving, 0) / filteredData.length
     const avgInvestAmount = filteredData.reduce((sum, r) => sum + r.invest, 0) / filteredData.length
     
-    // Find most consistent saving/investment months
     const consistentSavers = filteredData.filter(r => r.savingPercent > avgSavingPercent * 1.1).length
     const consistentInvestors = filteredData.filter(r => r.investPercent > avgInvestPercent * 1.1).length
 
-    // Financial health score (0-100)
-    const avgSavingScore = Math.min((avgSavingPercent / 30) * 40, 40) // Max 40 points for saving %
-    const avgInvestScore = Math.min((avgInvestPercent / 50) * 40, 40) // Max 40 points for investment %
-    const consistencyScore = ((consistentSavers + consistentInvestors) / (filteredData.length * 2)) * 20 // Max 20 points
+    const avgSavingScore = Math.min((avgSavingPercent / 30) * 40, 40)
+    const avgInvestScore = Math.min((avgInvestPercent / 50) * 40, 40)
+    const consistencyScore = ((consistentSavers + consistentInvestors) / (filteredData.length * 2)) * 20
     const healthScore = avgSavingScore + avgInvestScore + consistencyScore
 
-    // Recent trend (last 3 months of complete data)
     const recentAvgSaving = last3Months.length > 0 ? last3Months.reduce((sum, r) => sum + r.savingPercent, 0) / last3Months.length : 0
     const recentAvgInvest = last3Months.length > 0 ? last3Months.reduce((sum, r) => sum + r.investPercent, 0) / last3Months.length : 0
     
-    // Recent actual amounts based on selected periods
     const savingMonths = filteredData.slice(-savingPeriod)
     const investmentMonths = filteredData.slice(-investmentPeriod)
     const recentSavingAmount = savingMonths.reduce((sum, r) => sum + r.saving, 0)
@@ -149,13 +128,12 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
       recentSavingAmount,
       recentInvestAmount,
       last6Months,
-      totalMonths: filteredData.length, // Use filtered data count
-      hasEnoughData: filteredData.length >= 3, // Minimum for meaningful insights
-      incomeGrowthAvailable: last6Months.length >= 6 // Whether we can calculate 6M growth
+      totalMonths: filteredData.length,
+      hasEnoughData: filteredData.length >= 3,
+      incomeGrowthAvailable: last6Months.length >= 6
     }
   }
 
-  // Year-over-year comparison
   const getYearComparison = () => {
     if (!selectedYear || selectedYear === 2025) return null
 
@@ -180,12 +158,17 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
 
   if (!insights) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 mb-8 transition-colors duration-200">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Financial Insights</h3>
+      <div className="glass-dark rounded-2xl p-6 glow-purple">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <BarChart3 className="h-5 w-5 text-white" />
+          </div>
+          <h3 className="text-lg font-bold text-white">Financial Insights</h3>
+        </div>
         <div className="text-center py-8">
           <div className="text-5xl mb-4">📅</div>
-          <p className="text-gray-500 dark:text-gray-400 text-lg font-medium">No complete data available</p>
-          <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">
+          <p className="text-slate-300 text-lg font-medium">No complete data available</p>
+          <p className="text-slate-500 text-sm mt-2">
             {selectedYear && selectedYear > new Date().getFullYear() 
               ? `Data for ${selectedYear} will appear as months complete`
               : 'Add more earnings data to see insights'
@@ -197,218 +180,171 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
   }
 
   return (
-    <div className="space-y-6 mb-8">
+    <div className="space-y-6">
       {/* Key Insights Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Financial Health Score */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Financial Health</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{insights.healthScore.toFixed(0)}/100</p>
-            </div>
-            <div className={`p-3 rounded-full ${
-              insights.healthScore >= 80 ? 'bg-green-100 dark:bg-green-900/30' :
-              insights.healthScore >= 60 ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-red-100 dark:bg-red-900/30'
+        <div className="glass-dark rounded-2xl p-5 hover-lift">
+          <div className="flex items-center justify-between mb-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+              insights.healthScore >= 80 ? 'bg-emerald-500/20 border border-emerald-500/30' :
+              insights.healthScore >= 60 ? 'bg-amber-500/20 border border-amber-500/30' : 
+              'bg-red-500/20 border border-red-500/30'
             }`}>
               <span className="text-2xl">
                 {insights.healthScore >= 80 ? '🏆' : insights.healthScore >= 60 ? '👍' : '⚠️'}
               </span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            {insights.healthScore >= 80 ? 'Excellent financial habits' :
-             insights.healthScore >= 60 ? 'Good financial management' : 'Room for improvement'}
+          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Financial Health</p>
+          <p className="text-3xl font-black text-white">{insights.healthScore.toFixed(0)}<span className="text-lg text-slate-500">/100</span></p>
+          <p className="text-xs text-slate-500 mt-1">
+            {insights.healthScore >= 80 ? 'Excellent habits' :
+             insights.healthScore >= 60 ? 'Good management' : 'Room to improve'}
           </p>
         </div>
 
         {/* Income Growth */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Income Growth (6M)</p>
-              {insights.incomeGrowthAvailable ? (
-                <p className={`text-2xl font-bold ${insights.incomeGrowth >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {insights.incomeGrowth >= 0 ? '+' : ''}{formatPercent(insights.incomeGrowth)}
-                </p>
+        <div className="glass-dark rounded-2xl p-5 hover-lift">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-xl flex items-center justify-center">
+              {insights.incomeGrowth >= 0 ? (
+                <TrendingUp className="h-6 w-6 text-blue-400" />
               ) : (
-                <p className="text-2xl font-bold text-gray-400 dark:text-gray-500">N/A</p>
+                <TrendingDown className="h-6 w-6 text-red-400" />
               )}
             </div>
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-              <span className="text-2xl">📈</span>
-            </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            {insights.incomeGrowthAvailable 
-              ? "Comparing last 3 months vs previous 3 months (complete data only)"
-              : "Need 6+ months of complete data"}
+          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Income Growth (6M)</p>
+          {insights.incomeGrowthAvailable ? (
+            <p className={`text-3xl font-black ${insights.incomeGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              {insights.incomeGrowth >= 0 ? '+' : ''}{formatPercent(insights.incomeGrowth)}
+            </p>
+          ) : (
+            <p className="text-3xl font-black text-slate-500">N/A</p>
+          )}
+          <p className="text-xs text-slate-500 mt-1">
+            {insights.incomeGrowthAvailable ? "3M vs previous 3M" : "Need 6+ months"}
           </p>
         </div>
 
-        {/* Recent Trends */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Recent Saving</p>
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatPercent(insights.recentAvgSaving)}</p>
-            </div>
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+        {/* Recent Saving */}
+        <div className="glass-dark rounded-2xl p-5 hover-lift">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-cyan-500/20 border border-cyan-500/30 rounded-xl flex items-center justify-center">
               <span className="text-2xl">💰</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Last 3 months average
-          </p>
+          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Recent Saving</p>
+          <p className="text-3xl font-black text-cyan-400">{formatPercent(insights.recentAvgSaving)}</p>
+          <p className="text-xs text-slate-500 mt-1">Last 3 months avg</p>
         </div>
 
         {/* Recent Investment */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-all duration-200 hover:shadow-xl">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Recent Investment</p>
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{formatPercent(insights.recentAvgInvest)}</p>
-            </div>
-            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+        <div className="glass-dark rounded-2xl p-5 hover-lift">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-12 h-12 bg-purple-500/20 border border-purple-500/30 rounded-xl flex items-center justify-center">
               <span className="text-2xl">🚀</span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Last 3 months average
-          </p>
+          <p className="text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Recent Investment</p>
+          <p className="text-3xl font-black text-purple-400">{formatPercent(insights.recentAvgInvest)}</p>
+          <p className="text-xs text-slate-500 mt-1">Last 3 months avg</p>
         </div>
       </div>
 
       {/* Detailed Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Analysis */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📊 Performance Analysis</h3>
+        <div className="glass-dark rounded-2xl p-5 glow-cyan">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/30">
+              <Award className="h-5 w-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Performance Analysis</h3>
+          </div>
+          
           <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Best Month</span>
+            <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+              <span className="text-sm text-slate-400">Best Month</span>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{insights.bestMonth.month}</div>
-                <div className="text-xs text-green-600 dark:text-green-400">
+                <div className="text-sm font-bold text-white">{insights.bestMonth.month}</div>
+                <div className="text-xs text-emerald-400">
                   +{formatCurrency(insights.bestMonth.income - insights.bestMonth.expenditure)} surplus
                 </div>
               </div>
             </div>
             
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Challenging Month</span>
+            <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+              <span className="text-sm text-slate-400">Challenging Month</span>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{insights.worstMonth.month}</div>
-                <div className="text-xs text-red-600 dark:text-red-400">
+                <div className="text-sm font-bold text-white">{insights.worstMonth.month}</div>
+                <div className="text-xs text-red-400">
                   {formatCurrency(insights.worstMonth.income - insights.worstMonth.expenditure)} surplus
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Consistent Saving Months</span>
+            <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+              <span className="text-sm text-slate-400">Consistent Saving</span>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{insights.consistentSavers}/{insights.totalMonths}</div>
-                <div className="text-xs text-blue-600 dark:text-blue-400">
+                <div className="text-sm font-bold text-white">{insights.consistentSavers}/{insights.totalMonths}</div>
+                <div className="text-xs text-blue-400">
                   {((insights.consistentSavers / insights.totalMonths) * 100).toFixed(0)}% consistency
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-              <span className="text-sm text-gray-600 dark:text-gray-400">High Investment Months</span>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{insights.consistentInvestors}/{insights.totalMonths}</div>
-                <div className="text-xs text-purple-600 dark:text-purple-400">
-                  {((insights.consistentInvestors / insights.totalMonths) * 100).toFixed(0)}% consistency
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Recent Saving</span>
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-full p-1">
-                  <button
-                    onClick={() => setSavingPeriod(3)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all duration-200 ${
-                      savingPeriod === 3 
-                        ? 'bg-blue-500 text-white shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    3M
-                  </button>
-                  <button
-                    onClick={() => setSavingPeriod(6)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all duration-200 ${
-                      savingPeriod === 6 
-                        ? 'bg-green-500 text-white shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    6M
-                  </button>
-                  <button
-                    onClick={() => setSavingPeriod(12)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all duration-200 ${
-                      savingPeriod === 12 
-                        ? 'bg-orange-500 text-white shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    1Y
-                  </button>
+            <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-400">Recent Saving</span>
+                <div className="flex items-center gap-1 bg-slate-700/50 rounded-full p-0.5">
+                  {[3, 6, 12].map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setSavingPeriod(period as 3 | 6 | 12)}
+                      className={`px-2 py-0.5 text-xs rounded-full transition-all ${
+                        savingPeriod === period 
+                          ? 'bg-blue-500 text-white' 
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {period === 12 ? '1Y' : `${period}M`}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(insights.recentSavingAmount)}</div>
-                <div className="text-xs text-green-600 dark:text-green-400">
-                  Last {savingPeriod === 12 ? '1 year' : `${savingPeriod} months`} total
+                <div className="text-sm font-bold text-white">{formatCurrency(insights.recentSavingAmount)}</div>
+                <div className="text-xs text-emerald-400">
+                  Last {savingPeriod === 12 ? '1 year' : `${savingPeriod} months`}
                 </div>
               </div>
             </div>
 
             <div className="flex justify-between items-center py-3">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Recent Investment</span>
-                <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-full p-1">
-                  <button
-                    onClick={() => setInvestmentPeriod(3)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all duration-200 ${
-                      investmentPeriod === 3 
-                        ? 'bg-blue-500 text-white shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    3M
-                  </button>
-                  <button
-                    onClick={() => setInvestmentPeriod(6)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all duration-200 ${
-                      investmentPeriod === 6 
-                        ? 'bg-green-500 text-white shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    6M
-                  </button>
-                  <button
-                    onClick={() => setInvestmentPeriod(12)}
-                    className={`px-3 py-1 text-xs rounded-full transition-all duration-200 ${
-                      investmentPeriod === 12 
-                        ? 'bg-orange-500 text-white shadow-sm' 
-                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    1Y
-                  </button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-400">Recent Investment</span>
+                <div className="flex items-center gap-1 bg-slate-700/50 rounded-full p-0.5">
+                  {[3, 6, 12].map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setInvestmentPeriod(period as 3 | 6 | 12)}
+                      className={`px-2 py-0.5 text-xs rounded-full transition-all ${
+                        investmentPeriod === period 
+                          ? 'bg-purple-500 text-white' 
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {period === 12 ? '1Y' : `${period}M`}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(insights.recentInvestAmount)}</div>
-                <div className="text-xs text-purple-600 dark:text-purple-400">
-                  Last {investmentPeriod === 12 ? '1 year' : `${investmentPeriod} months`} total
+                <div className="text-sm font-bold text-white">{formatCurrency(insights.recentInvestAmount)}</div>
+                <div className="text-xs text-purple-400">
+                  Last {investmentPeriod === 12 ? '1 year' : `${investmentPeriod} months`}
                 </div>
               </div>
             </div>
@@ -416,62 +352,95 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
         </div>
 
         {/* Year-over-Year or Goal Tracking */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-200">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {yearComparison ? '📅 Year-over-Year' : '🎯 Financial Goals'}
-          </h3>
+        <div className="glass-dark rounded-2xl p-5 glow-amber">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
+              <Target className="h-5 w-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-white">
+              {yearComparison ? 'Year-over-Year' : 'Financial Goals'}
+            </h3>
+          </div>
           
           {yearComparison ? (
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Income Growth</span>
+              <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+                <span className="text-sm text-slate-400">Income Growth</span>
                 <div className="text-right">
-                  <div className={`text-sm font-medium ${yearComparison.incomeChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <div className={`text-sm font-bold ${yearComparison.incomeChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {yearComparison.incomeChange >= 0 ? '+' : ''}{formatPercent(yearComparison.incomeChange)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">vs {yearComparison.previousYear}</div>
+                  <div className="text-xs text-slate-500">vs {yearComparison.previousYear}</div>
                 </div>
               </div>
               
-              <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Saving Growth</span>
+              <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+                <span className="text-sm text-slate-400">Saving Growth</span>
                 <div className="text-right">
-                  <div className={`text-sm font-medium ${yearComparison.savingChange >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  <div className={`text-sm font-bold ${yearComparison.savingChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {yearComparison.savingChange >= 0 ? '+' : ''}{formatPercent(yearComparison.savingChange)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">vs {yearComparison.previousYear}</div>
+                  <div className="text-xs text-slate-500">vs {yearComparison.previousYear}</div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Saving Rate Target</span>
+              <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+                <span className="text-sm text-slate-400">Saving Rate Target</span>
                 <div className="text-right">
-                  <div className={`text-sm font-medium ${insights.avgSavingPercent >= 30 ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                  <div className={`text-sm font-bold ${insights.avgSavingPercent >= 30 ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {formatPercent(insights.avgSavingPercent)} / 30%
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-slate-500">
                     {insights.avgSavingPercent >= 30 ? 'Target achieved!' : 'Keep improving'}
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Investment Rate Target</span>
+              <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
+                <span className="text-sm text-slate-400">Investment Rate Target</span>
                 <div className="text-right">
-                  <div className={`text-sm font-medium ${insights.avgInvestPercent >= 50 ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                  <div className={`text-sm font-bold ${insights.avgInvestPercent >= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {formatPercent(insights.avgInvestPercent)} / 50%
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                  <div className="text-xs text-slate-500">
                     {insights.avgInvestPercent >= 50 ? 'Excellent!' : 'Room to grow'}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mt-4">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">💡 Insight:</span> 
+              {/* Progress bars */}
+              <div className="space-y-3 pt-2">
+                <div>
+                  <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>Saving Progress</span>
+                    <span>{Math.min((insights.avgSavingPercent / 30) * 100, 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min((insights.avgSavingPercent / 30) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-xs text-slate-400 mb-1">
+                    <span>Investment Progress</span>
+                    <span>{Math.min((insights.avgInvestPercent / 50) * 100, 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min((insights.avgInvestPercent / 50) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-r from-amber-900/30 to-orange-900/30 rounded-xl p-4 mt-4 border border-amber-500/20">
+                <p className="text-sm text-slate-300">
+                  <span className="font-bold text-amber-400">💡 Insight:</span> 
                   {insights.avgSavingPercent < 20 
                     ? " Focus on reducing expenses to increase your saving rate."
                     : insights.avgInvestPercent < 30
