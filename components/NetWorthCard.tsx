@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { TrendingUp, TrendingDown, Target, Sparkles, Trophy, Star, Clock, Calendar } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { TrendingUp, TrendingDown, Target, Sparkles, Trophy, Star, Clock, Calendar, X } from 'lucide-react'
 
 interface NetWorthCardProps {
   netWorth: number
@@ -27,25 +28,21 @@ interface MilestoneInfo {
   milestone: typeof MILESTONES[0]
   achievedMonth: string
   monthsToReach: number
-  journeyStart: string // Where the journey started from
+  journeyStart: string
 }
 
-// Career/Earning start date - this is when the wealth building journey began
-const CAREER_START = { month: 8, year: 2021, label: 'Aug 2021' } // August 2021
+const CAREER_START = { month: 8, year: 2021, label: 'Aug 2021' }
 
-// Helper to calculate months between two dates
 const calculateMonthsBetween = (startMonth: number, startYear: number, endMonth: number, endYear: number): number => {
   return (endYear - startYear) * 12 + (endMonth - startMonth)
 }
 
-// Helper to parse month string like "Aug 2025" or "Aug/25" to { month, year }
 const parseMonth = (monthStr: string): { month: number; year: number } | null => {
   const monthMap: { [key: string]: number } = {
     'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
     'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
   }
   
-  // Try format "Aug 2025"
   const match1 = monthStr.match(/^(\w+)\s+(\d{4})$/i)
   if (match1) {
     const month = monthMap[match1[1].toLowerCase()]
@@ -53,7 +50,6 @@ const parseMonth = (monthStr: string): { month: number; year: number } | null =>
     if (month) return { month, year }
   }
   
-  // Try format "Aug/25"
   const match2 = monthStr.match(/^(\w+)\/(\d{2})$/i)
   if (match2) {
     const month = monthMap[match2[1].toLowerCase()]
@@ -64,130 +60,163 @@ const parseMonth = (monthStr: string): { month: number; year: number } | null =>
   return null
 }
 
-// Balloon component with floating animation
-const Balloon = ({ delay, fromTop }: { delay: number; fromTop: boolean }) => {
-  const colors = [
-    'linear-gradient(180deg, #FF6B6B 0%, #CC5555 100%)', // Red
-    'linear-gradient(180deg, #4ECDC4 0%, #3AA89E 100%)', // Teal
-    'linear-gradient(180deg, #FFE66D 0%, #F4D35E 100%)', // Yellow
-    'linear-gradient(180deg, #95E1D3 0%, #7BC8BB 100%)', // Mint
-    'linear-gradient(180deg, #F38181 0%, #D96666 100%)', // Coral
-    'linear-gradient(180deg, #AA96DA 0%, #8A76BA 100%)', // Purple
-    'linear-gradient(180deg, #FCBAD3 0%, #E9A0BE 100%)', // Pink
-    'linear-gradient(180deg, #A8D8EA 0%, #8CC5D8 100%)', // Sky blue
-  ]
-  const randomColor = colors[Math.floor(Math.random() * colors.length)]
-  const randomX = 5 + Math.random() * 90
-  const randomSize = 40 + Math.random() * 25
-  const randomDuration = 3 + Math.random() * 2
+// Celebration Modal Component - Renders via Portal
+function CelebrationModal({ 
+  milestone, 
+  nextMilestone, 
+  milestoneInfo, 
+  amountToNext, 
+  onClose,
+  formatShort 
+}: { 
+  milestone: typeof MILESTONES[0]
+  nextMilestone?: typeof MILESTONES[0]
+  milestoneInfo?: MilestoneInfo
+  amountToNext: number
+  onClose: () => void
+  formatShort: (n: number) => string
+}) {
+  const [mounted, setMounted] = useState(false)
 
-  return (
-    <div
-      className={`absolute pointer-events-none ${fromTop ? 'animate-balloon-drop' : 'animate-balloon-rise'}`}
-      style={{
-        left: `${randomX}%`,
-        top: fromTop ? '-100px' : '100%',
-        animationDelay: `${delay}ms`,
-        animationDuration: `${randomDuration}s`,
-      }}
+  useEffect(() => {
+    setMounted(true)
+    // Prevent body scroll when modal is open
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [])
+
+  if (!mounted) return null
+
+  const modalContent = (
+    <div 
+      className="celebration-modal-overlay"
+      onClick={onClose}
     >
-      {/* Balloon body */}
-      <div
-        className="relative"
-        style={{
-          width: `${randomSize}px`,
-          height: `${randomSize * 1.2}px`,
-          background: randomColor,
-          borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%',
-          boxShadow: 'inset -10px -10px 20px rgba(0,0,0,0.1), inset 10px 10px 20px rgba(255,255,255,0.3)',
-        }}
-      >
-        {/* Balloon shine */}
-        <div
-          className="absolute"
-          style={{
-            width: '30%',
-            height: '30%',
-            background: 'rgba(255,255,255,0.4)',
-            borderRadius: '50%',
-            top: '15%',
-            left: '20%',
-          }}
-        />
-        {/* Balloon knot */}
-        <div
-          className="absolute"
-          style={{
-            width: '8px',
-            height: '8px',
-            background: 'inherit',
-            borderRadius: '50%',
-            bottom: '-4px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-          }}
-        />
+      {/* Floating Stars Background */}
+      <div className="celebration-stars">
+        {Array.from({ length: 50 }).map((_, i) => (
+          <div
+            key={i}
+            className="celebration-star"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
+              fontSize: `${10 + Math.random() * 20}px`,
+            }}
+          >
+            ✨
+          </div>
+        ))}
       </div>
-      {/* Balloon string */}
-      <div
-        className="mx-auto"
-        style={{
-          width: '1px',
-          height: `${randomSize * 0.8}px`,
-          background: 'rgba(0,0,0,0.3)',
-        }}
-      />
+
+      {/* Confetti Rain */}
+      <div className="celebration-confetti">
+        {Array.from({ length: 60 }).map((_, i) => (
+          <div
+            key={i}
+            className="confetti-piece"
+            style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              backgroundColor: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'][Math.floor(Math.random() * 7)],
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Main Card */}
+      <div 
+        className="celebration-card"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+        >
+          <X className="w-5 h-5 text-white/70" />
+        </button>
+
+        {/* Trophy */}
+        <div className="celebration-trophy">
+          <Trophy className="w-16 h-16 text-yellow-400" />
+        </div>
+
+        {/* Decorative Icons */}
+        <div className="flex justify-center gap-3 mb-2">
+          <span className="text-3xl celebration-bounce" style={{ animationDelay: '0s' }}>🎊</span>
+          <span className="text-3xl celebration-bounce" style={{ animationDelay: '0.1s' }}>🏆</span>
+          <span className="text-3xl celebration-bounce" style={{ animationDelay: '0.2s' }}>🎊</span>
+        </div>
+
+        {/* Title */}
+        <h2 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-yellow-300 via-orange-400 to-pink-400 bg-clip-text text-transparent mb-4">
+          Congratulations!
+        </h2>
+
+        {/* Achievement */}
+        <p className="text-gray-300 text-lg mb-2">You've reached</p>
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <span className="text-5xl">{milestone.emoji}</span>
+          <div className="text-center">
+            <div className="text-5xl md:text-6xl font-black text-white">
+              {milestone.label.split(' ')[0]}
+            </div>
+            <div className="text-2xl font-bold text-gray-300">
+              {milestone.label.split(' ')[1]}
+            </div>
+          </div>
+          <span className="text-5xl">{milestone.emoji}</span>
+        </div>
+        <p className="text-gray-400 text-lg mb-6">Net Worth Milestone!</p>
+
+        {/* Journey Info */}
+        {milestoneInfo && (
+          <div className="bg-gradient-to-r from-emerald-500/20 to-green-500/20 rounded-2xl p-4 mb-4 border border-emerald-500/30">
+            <p className="text-emerald-300 font-semibold">
+              🚀 Journey: {milestoneInfo.journeyStart} → {milestoneInfo.achievedMonth}
+            </p>
+            <p className="text-emerald-400/80 text-sm mt-1">
+              {(() => {
+                const years = Math.floor(milestoneInfo.monthsToReach / 12)
+                const months = milestoneInfo.monthsToReach % 12
+                if (years > 0 && months > 0) return `Achieved in ${years} years ${months} months`
+                if (years > 0) return `Achieved in ${years} years`
+                return `Achieved in ${months} months`
+              })()}
+            </p>
+          </div>
+        )}
+
+        {/* Next Target */}
+        {nextMilestone && (
+          <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl p-4 mb-6 border border-blue-500/30">
+            <p className="text-blue-300 font-semibold">
+              Next Target: {nextMilestone.label} {nextMilestone.emoji}
+            </p>
+            <p className="text-blue-400/80 text-sm mt-1">
+              {formatShort(amountToNext)} to go! Keep going! 💪
+            </p>
+          </div>
+        )}
+
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="px-8 py-3 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white font-bold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 transition-all"
+        >
+          Thanks! 🙏
+        </button>
+
+        <p className="text-gray-500 text-xs mt-4">Click anywhere to close</p>
+      </div>
     </div>
   )
-}
 
-// Confetti particle component
-const Confetti = ({ delay }: { delay: number }) => {
-  const colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
-  const randomColor = colors[Math.floor(Math.random() * colors.length)]
-  const randomX = Math.random() * 100
-  const randomRotation = Math.random() * 360
-  const randomSize = 8 + Math.random() * 12
-
-  return (
-    <div
-      className="absolute animate-confetti pointer-events-none"
-      style={{
-        left: `${randomX}%`,
-        top: '-10px',
-        animationDelay: `${delay}ms`,
-        transform: `rotate(${randomRotation}deg)`,
-      }}
-    >
-      <div
-        style={{
-          width: `${randomSize}px`,
-          height: `${randomSize}px`,
-          backgroundColor: randomColor,
-          borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-        }}
-      />
-    </div>
-  )
-}
-
-// Sparkle component
-const Sparkle = ({ delay }: { delay: number }) => {
-  const randomX = Math.random() * 100
-  const randomY = Math.random() * 100
-  
-  return (
-    <div
-      className="absolute animate-sparkle pointer-events-none text-2xl"
-      style={{
-        left: `${randomX}%`,
-        top: `${randomY}%`,
-        animationDelay: `${delay}ms`,
-      }}
-    >
-      ✨
-    </div>
-  )
+  return createPortal(modalContent, document.body)
 }
 
 // LocalStorage keys for tracking celebrated milestones
@@ -462,148 +491,16 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
 
   return (
     <>
-      {/* Full Screen Celebration Modal - Portal Style */}
+      {/* Celebration Modal - Uses Portal to render at document root */}
       {showCelebration && currentMilestone && (
-        <div 
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-          style={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-          }}
-        >
-          {/* Dark Backdrop with Blur */}
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            style={{ position: 'fixed', inset: 0 }}
-            onClick={() => setShowCelebration(false)}
-          />
-          
-          {/* Balloons from top */}
-          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
-            {Array.from({ length: 20 }).map((_, i) => (
-              <Balloon key={`top-${i}`} delay={i * 150} fromTop={true} />
-            ))}
-          </div>
-          
-          {/* Balloons from bottom */}
-          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
-            {Array.from({ length: 15 }).map((_, i) => (
-              <Balloon key={`bottom-${i}`} delay={i * 200 + 500} fromTop={false} />
-            ))}
-          </div>
-          
-          {/* Confetti */}
-          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
-            {Array.from({ length: 80 }).map((_, i) => (
-              <Confetti key={i} delay={i * 50} />
-            ))}
-          </div>
-          
-          {/* Sparkles */}
-          <div className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 2 }}>
-            {Array.from({ length: 20 }).map((_, i) => (
-              <Sparkle key={i} delay={i * 200} />
-            ))}
-          </div>
-          
-          {/* Celebration Card - Centered */}
-          <div 
-            className="relative w-full max-w-md mx-auto animate-celebration-pop"
-            style={{ zIndex: 10 }}
-          >
-            {/* Outer Glow */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 rounded-3xl blur-lg opacity-75 animate-pulse" />
-            
-            {/* Card with gradient border */}
-            <div className="relative bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500 rounded-3xl p-1 shadow-2xl">
-              <div className="bg-gray-900 rounded-3xl p-6 sm:p-8 md:p-10 text-center max-h-[85vh] overflow-y-auto">
-                {/* Trophy Icon */}
-                <div className="mb-4 sm:mb-6 animate-bounce-slow">
-                  <div className="inline-block p-3 sm:p-4 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full shadow-lg shadow-yellow-500/50">
-                    <Trophy className="h-12 w-12 sm:h-16 sm:w-16 text-white" />
-                  </div>
-                </div>
-                
-                {/* Decorative trophies */}
-                <div className="flex justify-center gap-2 mb-2">
-                  <span className="text-3xl animate-bounce" style={{ animationDelay: '0ms' }}>🏆</span>
-                  <span className="text-3xl animate-bounce" style={{ animationDelay: '100ms' }}>🎊</span>
-                  <span className="text-3xl animate-bounce" style={{ animationDelay: '200ms' }}>🏆</span>
-                </div>
-                
-                {/* Congratulations Text */}
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-400 mb-3 sm:mb-4">
-                  Congratulations!
-                </h2>
-                
-                {/* Milestone Achievement */}
-                <div className="mb-4 sm:mb-6">
-                  <p className="text-gray-400 text-base sm:text-lg mb-2">You've reached</p>
-                  <div className="flex items-center justify-center gap-2 sm:gap-3 my-3">
-                    <span className="text-4xl sm:text-5xl">{currentMilestone.emoji}</span>
-                    <div>
-                      <span className="text-4xl sm:text-6xl font-black text-white block">
-                        {currentMilestone.label.split(' ')[0]}
-                      </span>
-                      <span className="text-2xl sm:text-3xl font-bold text-gray-300">
-                        {currentMilestone.label.split(' ')[1]}
-                      </span>
-                    </div>
-                    <span className="text-4xl sm:text-5xl">{currentMilestone.emoji}</span>
-                  </div>
-                  <p className="text-gray-400 text-base sm:text-lg">Net Worth Milestone!</p>
-                </div>
-                
-                {/* Milestone Info */}
-                {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value) && (
-                  <div className="bg-gradient-to-r from-green-900/40 to-emerald-900/40 rounded-xl p-3 sm:p-4 mb-4 border border-green-700/50">
-                    <p className="text-green-300 font-medium text-sm sm:text-base">
-                      🚀 Journey: {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)?.journeyStart} → {milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)?.achievedMonth}
-                    </p>
-                    <p className="text-green-400 text-xs sm:text-sm mt-1">
-                      {(() => {
-                        const info = milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)
-                        if (!info) return ''
-                        const years = Math.floor(info.monthsToReach / 12)
-                        const months = info.monthsToReach % 12
-                        if (years > 0 && months > 0) return `Achieved in ${years} years ${months} months`
-                        if (years > 0) return `Achieved in ${years} years`
-                        return `Achieved in ${months} months`
-                      })()}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Next Milestone Teaser */}
-                {nextMilestone && (
-                  <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl p-3 sm:p-4 mb-4 border border-blue-700/50">
-                    <p className="text-blue-300 font-medium text-sm sm:text-base">
-                      Next Target: {nextMilestone.label} {nextMilestone.emoji}
-                    </p>
-                    <p className="text-blue-400 text-xs sm:text-sm mt-1">
-                      {formatShort(amountToNext)} to go! Keep going! 💪
-                    </p>
-                  </div>
-                )}
-                
-                {/* Close Button */}
-                <button
-                  onClick={() => setShowCelebration(false)}
-                  className="mt-2 px-6 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white font-bold rounded-full shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 transition-all duration-200 text-sm sm:text-base"
-                >
-                  Thanks! 🙏
-                </button>
-                
-                <p className="text-xs text-gray-500 mt-3">Click anywhere to close</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CelebrationModal
+          milestone={currentMilestone}
+          nextMilestone={nextMilestone}
+          milestoneInfo={milestoneTimelines.find(m => m.milestone.value === currentMilestone.value)}
+          amountToNext={amountToNext}
+          onClose={() => setShowCelebration(false)}
+          formatShort={formatShort}
+        />
       )}
 
       <div className="relative bg-gradient-to-br from-white to-green-50 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-lg p-6 border border-green-100 dark:border-gray-600 transition-colors duration-200 overflow-hidden">
@@ -611,7 +508,7 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <div>
+        <div>
             <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               Net Worth
               {currentMilestone && (
@@ -620,29 +517,29 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
                 </span>
               )}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Current financial position</p>
-          </div>
-          <div className={`p-3 rounded-full ${isPositive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-            {isPositive ? (
-              <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
-            ) : (
-              <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
-            )}
-          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Current financial position</p>
         </div>
-        
+        <div className={`p-3 rounded-full ${isPositive ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+          {isPositive ? (
+            <TrendingUp className="h-6 w-6 text-green-600 dark:text-green-400" />
+          ) : (
+            <TrendingDown className="h-6 w-6 text-red-600 dark:text-red-400" />
+          )}
+        </div>
+      </div>
+      
         {/* Net Worth Amount */}
-        <div className="space-y-3">
+      <div className="space-y-3">
           <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border border-gray-100 dark:border-gray-600">
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{month}</p>
-            <p className={`text-4xl font-bold ${
-              isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-            }`}>
-              {!isPositive && '-'}{formattedAmount}
-            </p>
-          </div>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{month}</p>
+          <p className={`text-4xl font-bold ${
+            isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+          }`}>
+            {!isPositive && '-'}{formattedAmount}
+          </p>
         </div>
-
+      </div>
+      
         {/* Progress to Next Milestone */}
         {nextMilestone && (
           <div className="mt-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
@@ -741,131 +638,21 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
         
         {/* Footer */}
         <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-600">
-          <div className="flex justify-between items-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Last updated: {new Date().toLocaleDateString('en-IN')}
-            </p>
+        <div className="flex justify-between items-center">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Last updated: {new Date().toLocaleDateString('en-IN')}
+          </p>
             <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
-              isPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-            }`}>
+            isPositive ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+          }`}>
               {currentMilestone && <Star className="h-3 w-3" />}
-              {isPositive ? 'Positive' : 'Negative'}
+            {isPositive ? 'Positive' : 'Negative'}
             </div>
           </div>
         </div>
       </div>
 
-      {/* CSS for animations */}
-      <style jsx>{`
-        @keyframes confetti {
-          0% {
-            transform: translateY(0) rotate(0deg);
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(100vh) rotate(720deg);
-            opacity: 0;
-          }
-        }
-        .animate-confetti {
-          animation: confetti 4s ease-out forwards;
-        }
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-        .animate-shimmer {
-          animation: shimmer 2s infinite;
-        }
-        @keyframes balloon-drop {
-          0% {
-            transform: translateY(0) rotate(-5deg);
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(50vh) rotate(5deg);
-          }
-          100% {
-            transform: translateY(120vh) rotate(-5deg);
-            opacity: 0.7;
-          }
-        }
-        .animate-balloon-drop {
-          animation: balloon-drop 5s ease-in-out forwards;
-        }
-        @keyframes balloon-rise {
-          0% {
-            transform: translateY(0) rotate(5deg);
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-50vh) rotate(-5deg);
-          }
-          100% {
-            transform: translateY(-120vh) rotate(5deg);
-            opacity: 0.7;
-          }
-        }
-        .animate-balloon-rise {
-          animation: balloon-rise 6s ease-in-out forwards;
-        }
-        @keyframes sparkle {
-          0%, 100% {
-            transform: scale(0) rotate(0deg);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1) rotate(180deg);
-            opacity: 1;
-          }
-        }
-        .animate-sparkle {
-          animation: sparkle 2s ease-in-out infinite;
-        }
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out forwards;
-        }
-        @keyframes celebration-pop {
-          0% {
-            transform: scale(0.5);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.05);
-          }
-          100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-        .animate-celebration-pop {
-          animation: celebration-pop 0.5s ease-out forwards;
-        }
-        @keyframes bounce-slow {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-10px);
-          }
-        }
-        .animate-bounce-slow {
-          animation: bounce-slow 2s ease-in-out infinite;
-        }
-      `}</style>
-      </div>
+</div>
     </>
   )
 }

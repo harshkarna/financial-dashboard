@@ -379,3 +379,259 @@
 .animate-glow {
   animation: glow-pulse 2s ease-in-out infinite;
 }
+
+/* ========================================
+   CELEBRATION MODAL STYLES
+   ======================================== */
+
+.celebration-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  animation: celebration-fade-in 0.3s ease-out;
+}
+
+.celebration-stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.celebration-star {
+  position: absolute;
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+.celebration-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  animation: confetti-rain 5s linear infinite;
+}
+
+.celebration-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  background: linear-gradient(145deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+  border-radius: 24px;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 
+    0 0 0 1px rgba(255, 215, 0, 0.3),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 100px rgba(255, 215, 0, 0.15);
+  animation: celebration-pop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.celebration-trophy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
+  border-radius: 50%;
+  margin-bottom: 1rem;
+  box-shadow: 
+    0 0 30px rgba(255, 215, 0, 0.5),
+    inset 0 -5px 20px rgba(0, 0, 0, 0.2);
+  animation: trophy-bounce 2s ease-in-out infinite;
+}
+
+.celebration-bounce {
+  display: inline-block;
+  animation: celebration-icon-bounce 0.6s ease infinite;
+}
+
+@keyframes celebration-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(50px);
+  }
+  50% {
+    transform: scale(1.05) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes trophy-bounce {
+  0%, 100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+@keyframes celebration-icon-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes confetti-rain {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   PREMIUM CARD STYLES
+   ======================================== */
+
+.premium-card {
+  @apply relative overflow-hidden rounded-2xl;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.premium-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+}
+
+.premium-stat-card {
+  @apply premium-card p-5;
+  transition: all 0.3s ease;
+}
+
+.premium-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.2),
+    0 10px 10px -5px rgba(0, 0, 0, 0.1);
+}
+
+.premium-glow-green {
+  box-shadow: 0 0 40px rgba(16, 185, 129, 0.15);
+}
+
+.premium-glow-blue {
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
+}
+
+.premium-glow-purple {
+  box-shadow: 0 0 40px rgba(139, 92, 246, 0.15);
+}
+
+.premium-glow-amber {
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.15);
+}
+
+/* Gradient text utilities */
+.text-gradient-gold {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, #ffd700 0%, #ffb347 50%, #ffd700 100%);
+}
+
+.text-gradient-emerald {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.text-gradient-blue {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+}
+
+.text-gradient-purple {
+  @apply bg-clip-text text-transparent;
+  background-image: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+}
+
+/* Icon background utilities */
+.icon-bg-emerald {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(52, 211, 153, 0.1) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.icon-bg-blue {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(96, 165, 250, 0.1) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.icon-bg-purple {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(167, 139, 250, 0.1) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.icon-bg-amber {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(251, 191, 36, 0.1) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.icon-bg-red {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(248, 113, 113, 0.1) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Responsive modal */
+@media (max-width: 640px) {
+  .celebration-card {
+    padding: 1.5rem;
+    max-width: 90vw;
+  }
+  
+  .celebration-trophy {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .celebration-trophy svg {
+    width: 32px;
+    height: 32px;
+  }
+}
