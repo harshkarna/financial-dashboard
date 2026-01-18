@@ -50,9 +50,10 @@ export async function GET(request: NextRequest) {
     console.log(`Fetching data from Google Sheet: ${spreadsheetId}, tab: "Net Worth"`)
 
     // Fetch all data from the "Net Worth" sheet
+    // Extended to column Z to accommodate future months
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Net Worth!A:K', // Fetch columns A through K
+      range: 'Net Worth!A:Z', // Fetch columns A through Z (extended for more months)
     })
 
     const rows = response.data.values || []
@@ -99,7 +100,20 @@ export async function GET(request: NextRequest) {
       'Sep 2025': 'Sep-25',
       'Oct 2025': 'Oct-25',
       'Nov 2025': 'Nov-25',
-      'Dec 2025': 'Dec-25'
+      'Dec 2025': 'Dec-25',
+      // 2026 months
+      'Jan 2026': 'Jan-26',
+      'Feb 2026': 'Feb-26',
+      'Mar 2026': 'Mar-26',
+      'Apr 2026': 'Apr-26',
+      'May 2026': 'May-26',
+      'Jun 2026': 'Jun-26',
+      'Jul 2026': 'Jul-26',
+      'Aug 2026': 'Aug-26',
+      'Sep 2026': 'Sep-26',
+      'Oct 2026': 'Oct-26',
+      'Nov 2026': 'Nov-26',
+      'Dec 2026': 'Dec-26'
     }
 
     if (!month) {

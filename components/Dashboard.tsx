@@ -6,6 +6,7 @@ import { NetWorthCard, NetWorthInsights } from './NetWorthCard'
 import { MonthSelector } from './MonthSelector'
 import { AssetBreakdown } from './AssetBreakdown'
 import { TrendChart } from './TrendChart'
+import { GrowthComparison } from './GrowthComparison'
 import { RefreshCw, AlertCircle, LayoutDashboard } from 'lucide-react'
 
 interface DashboardProps {
@@ -172,6 +173,11 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
         {/* Trend Chart - Full width */}
         <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
           <TrendChart currentMonth={selectedMonth} />
+        </div>
+
+        {/* Growth Comparison - Full width */}
+        <div className="animate-slide-up" style={{ animationDelay: '0.35s' }}>
+          <GrowthComparison />
         </div>
         
         {/* Assets and Liabilities - Side by side on desktop */}

@@ -36,9 +36,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch header row from the "Net Worth" sheet to get available months
+    // Extended to column Z to accommodate future months
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Net Worth!A1:K5', // Get first few rows to find header
+      range: 'Net Worth!A1:Z5', // Get first few rows to find header (extended for more months)
     })
 
     const rows = response.data.values || []
