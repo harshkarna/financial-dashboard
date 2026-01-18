@@ -218,10 +218,10 @@ function calculatePeriodComparison(current: MonthData, previous: MonthData, peri
   const typeChanges: Record<string, { current: number; previous: number; change: number; percent: number }> = {}
   
   // Combine all types from both periods
-  const allTypes = new Set([
+  const allTypes = Array.from(new Set([
     ...Object.keys(current.assetsByType),
     ...Object.keys(previous.assetsByType)
-  ])
+  ]))
 
   for (const type of allTypes) {
     const currentVal = current.assetsByType[type] || 0
@@ -245,10 +245,10 @@ function calculatePeriodComparison(current: MonthData, previous: MonthData, peri
   const previousItemsMap = new Map(previous.assets.map(a => [a.item, a]))
 
   // All unique items
-  const allItems = new Set([
+  const allItems = Array.from(new Set([
     ...current.assets.map(a => a.item),
     ...previous.assets.map(a => a.item)
-  ])
+  ]))
 
   for (const itemName of allItems) {
     const currentItem = currentItemsMap.get(itemName)
