@@ -689,7 +689,6 @@ export function MonthlyBudget() {
                         }}
                         labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
                         itemStyle={{ color: '#10b981' }}
-                        labelStyle={{ color: '#94a3b8' }}
                       />
                       <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />
                       <Line type="monotone" dataKey="income" stroke="#10b981" strokeWidth={3} dot={{ r: 5, fill: '#10b981', stroke: '#064e3b', strokeWidth: 2 }} activeDot={{ r: 7 }} name="Income" />
