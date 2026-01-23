@@ -11,6 +11,17 @@ const CACHE_DURATION = 300000 // 5 minutes cache
 // Market value is tracked separately in "Market Mutual Funds" and "Market Value Stocks"
 const EXCLUDED_ITEMS = ['Invested Mutual Funds', 'Invested Stock']
 
+// Key assets to track for insights - these are the most meaningful items to show growth
+const KEY_ASSETS = [
+  'Market Mutual Funds',
+  'Market Value Stocks', 
+  'Uber Vested RSU',
+  'ServiceNow Vested RSU',
+  'PF',
+  'Savings Account',
+  'PPF'
+]
+
 interface AssetData {
   category: string
   type: string
@@ -237,12 +248,36 @@ function calculatePeriodComparison(current: MonthData, previous: MonthData, peri
     }
   }
 
-  // Find top gainers and losers by item
-  const itemChanges: { item: string; type: string; change: number; percent: number; current: number }[] = []
+  // Calculate key asset insights
+  const keyAssets: Record<string, { current: number; previous: number; change: number; percent: number }> = {}
   
-  // Map current assets by item
+  // Map assets by item name for easy lookup
   const currentItemsMap = new Map(current.assets.map(a => [a.item, a]))
   const previousItemsMap = new Map(previous.assets.map(a => [a.item, a]))
+  
+  for (const keyItem of KEY_ASSETS) {
+    const currentAsset = currentItemsMap.get(keyItem)
+    const previousAsset = previousItemsMap.get(keyItem)
+    
+    const currentVal = currentAsset?.amount || 0
+    const previousVal = previousAsset?.amount || 0
+    
+    // Only include if the asset exists in at least one period
+    if (currentVal > 0 || previousVal > 0) {
+      const change = currentVal - previousVal
+      const percent = previousVal !== 0 ? ((change / previousVal) * 100) : (currentVal > 0 ? 100 : 0)
+      
+      keyAssets[keyItem] = {
+        current: currentVal,
+        previous: previousVal,
+        change,
+        percent
+      }
+    }
+  }
+
+  // Find top gainers and losers by item
+  const itemChanges: { item: string; type: string; change: number; percent: number; current: number }[] = []
 
   // All unique items
   const allItems = Array.from(new Set([
@@ -296,6 +331,7 @@ function calculatePeriodComparison(current: MonthData, previous: MonthData, peri
       percent: liabilitiesPercent
     },
     byType: typeChanges,
+    keyAssets,
     topChanges: itemChanges.slice(0, 5),  // Top 5 biggest changes
     topGainers: itemChanges.filter(i => i.change > 0).slice(0, 3),
     topLosers: itemChanges.filter(i => i.change < 0).slice(0, 3)

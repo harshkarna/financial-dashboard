@@ -629,6 +629,8 @@ export function MonthlyBudget() {
                           color: '#fff',
                           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
                         }}
+                        labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                        itemStyle={{ color: '#22d3ee' }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -685,6 +687,8 @@ export function MonthlyBudget() {
                           color: '#fff',
                           boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
                         }}
+                        labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                        itemStyle={{ color: '#10b981' }}
                         labelStyle={{ color: '#94a3b8' }}
                       />
                       <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8' }} />
@@ -762,6 +766,8 @@ export function MonthlyBudget() {
                         color: '#fff',
                         boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
                       }}
+                      labelStyle={{ color: '#f8fafc', fontWeight: 600 }}
+                      itemStyle={{ color: '#fbbf24' }}
                     />
                     <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
                       {summary.taxDeductions.monthlyBreakdown.map((_, index) => (

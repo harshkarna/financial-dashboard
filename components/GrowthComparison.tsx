@@ -11,10 +11,7 @@ import {
   CreditCard,
   Building2,
   PiggyBank,
-  Car,
   Coins,
-  ChevronDown,
-  ChevronUp,
   Sparkles,
   Target,
   Zap
@@ -28,6 +25,7 @@ interface ComparisonData {
   assets: { current: number; previous: number; change: number; percent: number }
   liabilities: { current: number; previous: number; change: number; percent: number }
   byType: Record<string, { current: number; previous: number; change: number; percent: number }>
+  keyAssets: Record<string, { current: number; previous: number; change: number; percent: number }>
   topChanges: Array<{ item: string; type: string; change: number; percent: number; current: number }>
   topGainers: Array<{ item: string; type: string; change: number; percent: number; current: number }>
   topLosers: Array<{ item: string; type: string; change: number; percent: number; current: number }>
@@ -44,29 +42,45 @@ interface ApiResponse {
 
 type PeriodKey = 'mom' | 'twoMonth' | 'threeMonth' | 'sixMonth'
 
-const TYPE_ICONS: Record<string, any> = {
-  'Liquid Asset': Wallet,
-  'Investment': BarChart3,
-  'Non-liquid': Building2,
-  'Depreciating': Car,
-  'Other Asset': Coins,
-  'default': PiggyBank
+// Key Asset Icons
+const KEY_ASSET_ICONS: Record<string, any> = {
+  'Market Mutual Funds': BarChart3,
+  'Market Value Stocks': TrendingUp,
+  'Uber Vested RSU': Building2,
+  'ServiceNow Vested RSU': Building2,
+  'PF': PiggyBank,
+  'Savings Account': Wallet,
+  'PPF': Coins,
+  'default': Target
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  'Liquid Asset': 'from-blue-500 to-cyan-500',
-  'Investment': 'from-purple-500 to-pink-500',
-  'Non-liquid': 'from-amber-500 to-orange-500',
-  'Depreciating': 'from-slate-500 to-gray-500',
-  'Other Asset': 'from-emerald-500 to-teal-500',
-  'default': 'from-indigo-500 to-blue-500'
+// Key Asset Colors
+const KEY_ASSET_COLORS: Record<string, string> = {
+  'Market Mutual Funds': 'from-purple-500 to-pink-500',
+  'Market Value Stocks': 'from-blue-500 to-cyan-500',
+  'Uber Vested RSU': 'from-amber-500 to-orange-500',
+  'ServiceNow Vested RSU': 'from-green-500 to-emerald-500',
+  'PF': 'from-emerald-500 to-teal-500',
+  'Savings Account': 'from-sky-500 to-blue-500',
+  'PPF': 'from-rose-500 to-pink-500',
+  'default': 'from-indigo-500 to-violet-500'
+}
+
+// Short display names for key assets
+const KEY_ASSET_NAMES: Record<string, string> = {
+  'Market Mutual Funds': 'Mutual Funds',
+  'Market Value Stocks': 'Stocks',
+  'Uber Vested RSU': 'Uber RSU',
+  'ServiceNow Vested RSU': 'ServiceNow RSU',
+  'PF': 'Provident Fund',
+  'Savings Account': 'Savings',
+  'PPF': 'PPF'
 }
 
 export function GrowthComparison() {
   const [data, setData] = useState<ApiResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>('mom')
-  const [expandedTypes, setExpandedTypes] = useState(false)
 
   useEffect(() => {
     fetchComparisonData()
@@ -299,67 +313,61 @@ export function GrowthComparison() {
           </div>
         </div>
 
-        {/* Asset Type Breakdown */}
-        <div className="bg-slate-800/40 rounded-xl border border-slate-700/50 overflow-hidden">
-          <button 
-            onClick={() => setExpandedTypes(!expandedTypes)}
-            className="w-full flex items-center justify-between p-4 hover:bg-slate-700/30 transition-colors"
-          >
-            <div className="flex items-center gap-2">
+        {/* Key Asset Insights */}
+        {currentComparison.keyAssets && Object.keys(currentComparison.keyAssets).length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 mb-1">
               <Zap className="w-4 h-4 text-purple-400" />
-              <span className="font-semibold text-white">Asset Type Breakdown</span>
-              <span className="text-xs text-slate-500">({Object.keys(currentComparison.byType).length} categories)</span>
+              <span className="font-semibold text-white">Key Investment Growth</span>
             </div>
-            {expandedTypes ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-          </button>
-          
-          {expandedTypes && (
-            <div className="p-4 pt-0 space-y-3">
-              {Object.entries(currentComparison.byType)
-                .sort((a, b) => b[1].current - a[1].current)
-                .map(([type, data]) => {
-                  const Icon = TYPE_ICONS[type] || TYPE_ICONS.default
-                  const colorClass = TYPE_COLORS[type] || TYPE_COLORS.default
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {Object.entries(currentComparison.keyAssets)
+                .sort((a, b) => Math.abs(b[1].change) - Math.abs(a[1].change))
+                .map(([assetName, data]) => {
+                  const Icon = KEY_ASSET_ICONS[assetName] || KEY_ASSET_ICONS.default
+                  const colorClass = KEY_ASSET_COLORS[assetName] || KEY_ASSET_COLORS.default
+                  const displayName = KEY_ASSET_NAMES[assetName] || assetName
                   const isPositive = data.change >= 0
                   
                   return (
-                    <div key={type} className="flex items-center gap-4 p-3 bg-slate-900/50 rounded-xl border border-slate-700/30">
-                      <div className={`w-10 h-10 bg-gradient-to-br ${colorClass} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                        <Icon className="w-5 h-5 text-white" />
+                    <div 
+                      key={assetName} 
+                      className={`
+                        relative overflow-hidden rounded-xl p-4 border transition-all hover:scale-[1.02]
+                        ${isPositive 
+                          ? 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-emerald-500/30 hover:border-emerald-500/50' 
+                          : 'bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-red-500/30 hover:border-red-500/50'
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={`w-8 h-8 bg-gradient-to-br ${colorClass} rounded-lg flex items-center justify-center shadow-lg`}>
+                          <Icon className="w-4 h-4 text-white" />
+                        </div>
+                        <span className="font-medium text-white text-sm truncate">{displayName}</span>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-white truncate">{type}</span>
-                          <span className="text-sm text-slate-400">{formatCurrency(data.current)}</span>
-                        </div>
-                        
-                        {/* Progress bar showing change */}
-                        <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full rounded-full transition-all ${isPositive ? 'bg-emerald-500' : 'bg-red-500'}`}
-                            style={{ 
-                              width: `${Math.min(Math.abs(data.percent), 100)}%`,
-                              minWidth: data.change !== 0 ? '4px' : '0px'
-                            }}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="text-right flex-shrink-0">
-                        <p className={`text-sm font-bold ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
+                      <div className="space-y-1">
+                        <p className={`text-xl font-black ${isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
                           {formatChange(data.change)}
                         </p>
-                        <p className={`text-xs ${isPositive ? 'text-emerald-400/70' : 'text-red-400/70'}`}>
-                          {formatPercent(data.percent)}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-500">{formatCurrency(data.current)}</span>
+                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${isPositive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                            {formatPercent(data.percent)}
+                          </span>
+                        </div>
                       </div>
+                      
+                      {/* Decorative gradient */}
+                      <div className={`absolute -right-4 -bottom-4 w-20 h-20 rounded-full opacity-10 bg-gradient-to-br ${colorClass}`} />
                     </div>
                   )
                 })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Top Movers */}
         {(currentComparison.topGainers.length > 0 || currentComparison.topLosers.length > 0) && (

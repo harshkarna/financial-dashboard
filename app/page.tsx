@@ -7,13 +7,14 @@ import { Dashboard } from '@/components/Dashboard'
 import { EarningsBreakdown } from '@/components/EarningsBreakdown'
 import { MonthlyBudget } from '@/components/MonthlyBudget'
 import { Investments } from '@/components/Investments'
+import { OtherIncomeAnalytics } from '@/components/OtherIncomeAnalytics'
 import { LoginCard } from '@/components/LoginCard'
 import { DashboardSelector } from '@/components/DashboardSelector'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 
 export default function Home() {
   const { data: session, status } = useSession()
-  const [selectedDashboard, setSelectedDashboard] = useState<'networth' | 'earnings' | 'budget' | 'investments'>('networth')
+  const [selectedDashboard, setSelectedDashboard] = useState<'networth' | 'earnings' | 'budget' | 'investments' | 'other-income'>('networth')
   const searchParams = useSearchParams()
   const [zerodhaMessage, setZerodhaMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -90,9 +91,13 @@ export default function Home() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <MonthlyBudget />
             </div>
-          ) : (
+          ) : selectedDashboard === 'investments' ? (
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <Investments />
+            </div>
+          ) : (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <OtherIncomeAnalytics />
             </div>
           )}
         </main>
