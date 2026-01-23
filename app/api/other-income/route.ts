@@ -368,9 +368,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Convert to array and sort by date
-    for (const [month, data] of monthMap.entries()) {
+    Array.from(monthMap.entries()).forEach(([month, data]) => {
       monthlyTrend.push({ month, ...data })
-    }
+    })
     
     // Sort chronologically
     monthlyTrend.sort((a, b) => {
