@@ -156,7 +156,7 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
           />
         </div>
         
-        {/* Net Worth Card + Insights - Side by side on desktop */}
+        {/* Net Worth Card + Insights - Side by side with equal heights */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
             <NetWorthCard 

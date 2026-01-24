@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
             const incomeMonth = row[5]?.toString().trim()
             if (incomeMonth && incomeMonth.toLowerCase() !== 'total' && incomeMonth.toLowerCase() !== 'month') {
               const incomeYear = extractYear(incomeMonth)
-              allIncome.push({
+              const incomeData = {
                 month: incomeMonth,
                 incomeSource1: parseAmount(row[6]),
                 incomeSource2: parseAmount(row[7]),
@@ -182,7 +182,12 @@ export async function GET(request: NextRequest) {
                 totalExpenses: parseAmount(row[11]),
                 totalSavings: parseAmount(row[12]),
                 year: incomeYear
-          })
+              }
+              // Debug log for 2026 months
+              if (incomeYear === 2026) {
+                console.log(`Parsing 2026 income: ${incomeMonth} - src1=${incomeData.incomeSource1}, src2=${incomeData.incomeSource2}, total=${incomeData.totalIncome}`)
+              }
+              allIncome.push(incomeData)
         }
       }
     }
@@ -204,26 +209,54 @@ export async function GET(request: NextRequest) {
     let filteredIncome = [...allIncome]
     let filteredExpenses = [...allExpenses]
 
+    // Helper to check if a month is in the future
+    const isNotFutureMonth = (itemYear: number, itemMonth: number) => {
+      // Past years - always valid
+      if (itemYear < currentYear) return true
+      // Current year - only if month is current or past
+      if (itemYear === currentYear && itemMonth <= currentMonth) return true
+      // Future year or future month in current year - skip
+      return false
+    }
+
+    // Helper to check if a row has actual data (not just empty/zero values)
+    const hasActualData = (inc: IncomeItem) => {
+      const hasData = inc.totalIncome > 0 || inc.totalExpenses > 0 || inc.incomeSource1 > 0 || inc.incomeSource2 > 0
+      if (!hasData) {
+        console.log(`Filtering out ${inc.month} - no data (totalIncome: ${inc.totalIncome}, totalExpenses: ${inc.totalExpenses})`)
+      }
+      return hasData
+    }
+
     // Apply year filter if specified
     if (year && year !== 'all') {
       const yearNum = parseInt(year)
-      // When specific year is selected, show ALL data for that year (including future months)
-      filteredIncome = allIncome.filter(inc => inc.year === yearNum)
-      filteredExpenses = allExpenses.filter(exp => exp.year === yearNum)
-      console.log(`Filtered to year ${year}: ${filteredIncome.length} income, ${filteredExpenses.length} expenses`)
-    } else {
-      // For "All Years", filter out future months to avoid confusion
+      // Filter to selected year AND only include rows with actual data
+      // Show months with actual data even if they're technically in the "future"
       filteredIncome = allIncome.filter(inc => {
-        const incYear = inc.year
+        if (inc.year !== yearNum) return false
+        // Only include rows with actual data (this handles both past empty months and future empty months)
+        return hasActualData(inc)
+      })
+      filteredExpenses = allExpenses.filter(exp => {
+        if (exp.year !== yearNum) return false
+        return true
+      })
+      console.log(`Filtered to year ${year}: ${filteredIncome.length} income, ${filteredExpenses.length} expenses`)
+      console.log(`Filtered income months: ${filteredIncome.map(i => `${i.month}: income=${i.totalIncome}`).join(', ')}`)
+    } else {
+      // For "All Years", filter to past/current months with actual data
+      filteredIncome = allIncome.filter(inc => {
         const incMonth = getMonthNumber(inc.month)
-        return incYear < currentYear || (incYear === currentYear && incMonth <= currentMonth)
+        // For all years view, only show past/current months
+        if (!isNotFutureMonth(inc.year, incMonth)) return false
+        return hasActualData(inc)
       })
 
       filteredExpenses = allExpenses.filter(exp => {
-        const expYear = exp.year
         const expMonth = getMonthNumber(exp.month)
-        return expYear < currentYear || (expYear === currentYear && expMonth <= currentMonth)
-    })
+        return isNotFutureMonth(exp.year, expMonth)
+      })
     }
     
     // Apply month filter if specified

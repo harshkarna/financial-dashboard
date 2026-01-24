@@ -117,37 +117,72 @@ const COLORS = [
 export function MonthlyBudget() {
   const [budgetData, setBudgetData] = useState<BudgetData | null>(null)
   const [loading, setLoading] = useState(true)
+  // Start with 'all' to fetch available data first
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
-  // Default to current year
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString())
+  const [selectedYear, setSelectedYear] = useState<string>('')
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
-  const [initialYearSet, setInitialYearSet] = useState(false)
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
 
+  // Initial fetch to get available years
   useEffect(() => {
-    fetchBudgetData()
-  }, [selectedMonth, selectedYear])
-
-  // Set year to most recent available year ONLY on first load
-  useEffect(() => {
-    if (!initialYearSet && budgetData?.availableYears && budgetData.availableYears.length > 0) {
-      const currentYear = new Date().getFullYear()
-      // If current year is available, use it; otherwise use most recent
-      if (budgetData.availableYears.includes(currentYear)) {
-        setSelectedYear(currentYear.toString())
-      } else {
-        // Use most recent available year
-        setSelectedYear(budgetData.availableYears[0].toString())
+    // Fetch without year first to get all available years
+    const fetchInitialData = async () => {
+      setLoading(true)
+      try {
+        const response = await fetch('/api/budget')
+        if (!response.ok) throw new Error('Failed to fetch budget data')
+        const data = await response.json()
+        setBudgetData(data)
+        
+        // Set the best year on initial load - month will be set after year-specific fetch
+        if (!initialLoadDone && data.availableYears && data.availableYears.length > 0) {
+          const currentYear = new Date().getFullYear()
+          // Use current year if available, otherwise most recent year (sorted descending, so [0] is latest)
+          const bestYear = data.availableYears.includes(currentYear) 
+            ? currentYear 
+            : data.availableYears[0]
+          setSelectedYear(bestYear.toString())
+          setPrevYear(bestYear.toString()) // Initialize prevYear to avoid triggering year change
+          
+          // Don't set month here - let the year-specific fetch set it
+          // The fetchBudgetData will run after this and set the proper month
+          setInitialLoadDone(true)
+        }
+      } catch (error) {
+        console.error('Error fetching budget data:', error)
+      } finally {
+        setLoading(false)
       }
-      setInitialYearSet(true) // Mark as initialized so this doesn't run again
     }
-  }, [budgetData?.availableYears, initialYearSet])
+    
+    if (!initialLoadDone) {
+      fetchInitialData()
+    }
+  }, [initialLoadDone])
 
-  const fetchBudgetData = async () => {
+  // Track previous year to detect year changes
+  const [prevYear, setPrevYear] = useState<string>('')
+  const [needsMonthUpdate, setNeedsMonthUpdate] = useState(true) // Start true for initial load
+
+  // Fetch data when year/month changes (after initial load)
+  useEffect(() => {
+    if (initialLoadDone && selectedYear) {
+      const yearChanged = prevYear !== '' && prevYear !== selectedYear
+      const shouldUpdateMonth = yearChanged || needsMonthUpdate
+      
+      fetchBudgetData(shouldUpdateMonth) // Update month selection when year changes or on first load
+      setPrevYear(selectedYear)
+      if (needsMonthUpdate) setNeedsMonthUpdate(false)
+    }
+  }, [selectedMonth, selectedYear, initialLoadDone])
+
+  const fetchBudgetData = async (updateMonth = false) => {
+    if (!selectedYear) return // Don't fetch if year not set yet
+    
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (selectedMonth !== 'all') params.append('month', selectedMonth)
-      // Always pass year (no "all" option anymore)
+      if (selectedMonth !== 'all' && !updateMonth) params.append('month', selectedMonth)
       params.append('year', selectedYear)
       
       const queryString = params.toString()
@@ -155,6 +190,16 @@ export function MonthlyBudget() {
       if (!response.ok) throw new Error('Failed to fetch budget data')
       const data = await response.json()
       setBudgetData(data)
+      
+      // When year changes, auto-select the most recent available month
+      if (updateMonth && data.availableMonths && data.availableMonths.length > 0) {
+        // availableMonths is sorted chronologically, take the last one for most recent
+        const mostRecentMonth = data.availableMonths[data.availableMonths.length - 1]
+        setSelectedMonth(mostRecentMonth)
+      } else if (data.availableMonths && data.availableMonths.length === 0) {
+        // No months available, reset to 'all'
+        setSelectedMonth('all')
+      }
     } catch (error) {
       console.error('Error fetching budget data:', error)
     } finally {
@@ -486,7 +531,7 @@ export function MonthlyBudget() {
               ))}
             </select>
           )}
-        </div>
+          </div>
       </div>
 
       {/* Summary Cards - Premium Dark Style with Glow */}
@@ -501,7 +546,7 @@ export function MonthlyBudget() {
             <p className="text-emerald-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Income</p>
             <p className="text-2xl md:text-3xl font-black text-white">{formatShortCurrency(summary.totalIncome)}</p>
           </div>
-        </div>
+              </div>
 
         {/* Expenses Card */}
         <div className="group relative overflow-hidden bg-gradient-to-br from-red-900/50 to-rose-900/40 rounded-2xl p-5 border border-red-500/30 glow-red hover-lift card-shine">
@@ -513,7 +558,7 @@ export function MonthlyBudget() {
             <p className="text-red-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Expenses</p>
             <p className="text-2xl md:text-3xl font-black text-white">{formatShortCurrency(summary.totalExpenses)}</p>
           </div>
-        </div>
+              </div>
 
         {/* Savings Card */}
         <div className="group relative overflow-hidden bg-gradient-to-br from-blue-900/50 to-cyan-900/40 rounded-2xl p-5 border border-blue-500/30 glow-blue hover-lift card-shine">
@@ -525,7 +570,7 @@ export function MonthlyBudget() {
             <p className="text-blue-400/90 text-xs uppercase tracking-wider font-semibold mb-1">Savings</p>
             <p className="text-2xl md:text-3xl font-black text-white">{formatShortCurrency(summary.totalSavings)}</p>
           </div>
-        </div>
+              </div>
 
         {/* Save Rate Card */}
         <div className="group relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/40 rounded-2xl p-5 border border-purple-500/30 glow-purple hover-lift card-shine">
@@ -557,23 +602,23 @@ export function MonthlyBudget() {
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {insights.map((insight, index) => (
-              <div
-                key={index}
+              {insights.map((insight, index) => (
+                <div
+                  key={index}
                 className="group bg-slate-700/50 hover:bg-slate-700/80 rounded-xl p-4 border border-slate-600/50 hover:border-purple-500/50 transition-all duration-300"
-              >
-                <div className="flex items-start gap-3">
+                >
+                  <div className="flex items-start gap-3">
                   <span className="text-2xl group-hover:scale-110 transition-transform">{insight.icon}</span>
                   <div className="min-w-0 flex-1">
                     <h4 className="font-semibold text-white text-sm mb-1">{insight.title}</h4>
                     <p className="text-slate-400 text-xs leading-relaxed line-clamp-3">
-                      {insight.description}
-                    </p>
+                        {insight.description}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
         </div>
       )}
 
@@ -592,11 +637,11 @@ export function MonthlyBudget() {
                 </div>
                 <h3 className="text-lg font-bold text-white">Top Spending Categories</h3>
               </div>
-              {collapsedSections['categories'] ? (
+                {collapsedSections['categories'] ? (
                 <ChevronDown className="h-5 w-5 text-slate-400" />
-              ) : (
+                ) : (
                 <ChevronUp className="h-5 w-5 text-slate-400" />
-              )}
+                )}
             </div>
             {!collapsedSections['categories'] && (
               <div className="px-5 pb-5 pt-3">
@@ -653,11 +698,11 @@ export function MonthlyBudget() {
                 </div>
                 <h3 className="text-lg font-bold text-white">Monthly Trends</h3>
               </div>
-              {collapsedSections['trends'] ? (
+                {collapsedSections['trends'] ? (
                 <ChevronDown className="h-5 w-5 text-slate-400" />
-              ) : (
+                ) : (
                 <ChevronUp className="h-5 w-5 text-slate-400" />
-              )}
+                )}
             </div>
             {!collapsedSections['trends'] && (
               <div className="px-5 pb-5 pt-3">
@@ -716,11 +761,11 @@ export function MonthlyBudget() {
               </div>
               <h3 className="text-lg font-bold text-white">Advance Tax ({taxFiscalYear})</h3>
             </div>
-            {collapsedSections['advanceTax'] ? (
+              {collapsedSections['advanceTax'] ? (
               <ChevronDown className="h-5 w-5 text-slate-400" />
-            ) : (
+              ) : (
               <ChevronUp className="h-5 w-5 text-slate-400" />
-            )}
+              )}
           </div>
           {!collapsedSections['advanceTax'] && (
             <div className="px-5 pb-5 pt-3 space-y-4">

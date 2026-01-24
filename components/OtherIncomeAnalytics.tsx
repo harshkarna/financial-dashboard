@@ -44,12 +44,15 @@ import {
 
 interface IncomeEntry {
   description: string
+  type: string
   status: string
   fy: string
   invoiceDate: string
   totalUSD: number
   estimate: number
   actual: number
+  tax: number
+  actualPostTax: number
   rateConversion: number
   category: 'course' | 'royalty' | 'miscellaneous'
 }
@@ -57,6 +60,7 @@ interface IncomeEntry {
 interface CategoryData {
   count: number
   totalINR: number
+  totalINRPostTax: number
   entries: IncomeEntry[]
 }
 
@@ -74,8 +78,10 @@ interface FYSummary {
   fy: string
   totalUSD: number
   totalINR: number
+  totalINRPostTax: number
   courseCount: number
   avgCourseEarning: number
+  avgCourseEarningPostTax: number
   paidCount: number
   pendingCount: number
   pendingAmount: number
@@ -108,11 +114,13 @@ interface OtherIncomeData {
   summary: {
     totalEarningsUSD: number
     totalEarningsINR: number
+    totalEarningsINRPostTax: number
     totalCourses: number
     paidCourses: number
     pendingPayments: number
     pendingCount: number
     avgCourseEarning: number
+    avgCourseEarningPostTax: number
     avgConversionRate: number
   }
   categories: {
@@ -355,7 +363,7 @@ export function OtherIncomeAnalytics() {
           <Target className="absolute -right-2 -bottom-2 w-20 h-20 text-blue-500/10" />
         </div>
 
-        {/* Avg Per Course (only from published courses) */}
+        {/* Avg Per Course (only from published courses) - POST TAX */}
         <div className="glass-dark rounded-2xl p-5 glow-purple relative overflow-hidden group hover:scale-[1.02] transition-transform">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
@@ -363,8 +371,9 @@ export function OtherIncomeAnalytics() {
             </div>
             <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Avg/Course</span>
           </div>
-          <p className="text-3xl font-black text-white mb-1">{formatCurrency(summary.avgCourseEarning)}</p>
-          <p className="text-sm text-purple-400">Per published course</p>
+          <p className="text-3xl font-black text-white mb-1">{formatCurrency(summary.avgCourseEarningPostTax)}</p>
+          <p className="text-sm text-emerald-400 mb-1">Post-tax per course</p>
+          <p className="text-xs text-slate-500">Pre-tax: {formatCurrency(summary.avgCourseEarning)}</p>
           <Award className="absolute -right-2 -bottom-2 w-20 h-20 text-purple-500/10" />
         </div>
 

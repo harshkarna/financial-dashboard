@@ -9,12 +9,15 @@ const CACHE_DURATION = 300000 // 5 minutes cache
 
 interface IncomeEntry {
   description: string
+  type: string // From column B dropdown
   status: 'Paid' | 'To be Paid' | string
   fy: string
   invoiceDate: string
   totalUSD: number
   estimate: number
   actual: number
+  tax: number
+  actualPostTax: number
   rateConversion: number
   category: 'course' | 'royalty' | 'miscellaneous'
 }
@@ -117,21 +120,21 @@ function calculateCourseInsights(courses: IncomeEntry[]) {
   }
 }
 
-// Helper to categorize income entries
-function categorizeEntry(description: string): 'course' | 'royalty' | 'miscellaneous' {
-  const lowerDesc = description.toLowerCase()
+// Helper to categorize income entries based on Type column (B)
+function categorizeFromType(typeValue: string): 'course' | 'royalty' | 'miscellaneous' {
+  const lowerType = (typeValue || '').toLowerCase().trim()
   
-  // Courses have "Published" in the name
-  if (lowerDesc.includes('published')) {
+  // Match "Course" or "Courses" variations
+  if (lowerType.includes('course')) {
     return 'course'
   }
   
-  // Quarterly royalties have Q1, Q2, Q3, Q4 Author Fees
-  if (/q[1-4]\s*(author\s*fees|royalt)/i.test(description)) {
+  // Match "Royalty" or "Royalties" variations
+  if (lowerType.includes('royalt')) {
     return 'royalty'
   }
   
-  // Everything else is miscellaneous
+  // Everything else (including 'Misc') is miscellaneous
   return 'miscellaneous'
 }
 
@@ -149,8 +152,10 @@ interface FYSummary {
   fy: string
   totalUSD: number
   totalINR: number
+  totalINRPostTax: number
   courseCount: number
   avgCourseEarning: number
+  avgCourseEarningPostTax: number
   paidCount: number
   pendingCount: number
   pendingAmount: number
@@ -185,15 +190,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch income entries from Other Income Analytics sheet
+    // Columns: A=Description, B=Type, C=Status, D=FY, E=Invoice Date, F=Total USD, G=Estimate, H=Actual, I=Tax, J=Actual Post Tax, K=Rate Conversion
     const incomeResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Other Income Analytics!A:H',
+      range: 'Other Income Analytics!A:K',
     })
 
     const incomeRows = incomeResponse.data.values || []
     
     // Parse income entries (skip header row)
     const incomeEntries: IncomeEntry[] = []
+    
+    // Debug: Log first few rows to verify column structure
+    console.log('Other Income - First 3 data rows:')
+    for (let i = 1; i <= 3 && i < incomeRows.length; i++) {
+      const row = incomeRows[i]
+      console.log(`Row ${i}: Description="${row[0]}", Type="${row[1]}", Status="${row[2]}", FY="${row[3]}"`)
+    }
+    
     for (let i = 1; i < incomeRows.length; i++) {
       const row = incomeRows[i]
       if (!row[0]) continue // Skip empty rows
@@ -205,23 +219,36 @@ export async function GET(request: NextRequest) {
       }
 
       const description = row[0]?.toString() || ''
+      const typeValue = row[1]?.toString() || ''
+      const category = categorizeFromType(typeValue)
+      
       incomeEntries.push({
         description,
-        status: row[1]?.toString() || '',
-        fy: row[2]?.toString() || '',
-        invoiceDate: row[3]?.toString() || '',
-        totalUSD: parseAmount(row[4]),
-        estimate: parseAmount(row[5]),
-        actual: parseAmount(row[6]),
-        rateConversion: parseFloat(row[7]) || 0,
-        category: categorizeEntry(description)
+        type: typeValue,
+        status: row[2]?.toString() || '',
+        fy: row[3]?.toString() || '',
+        invoiceDate: row[4]?.toString() || '',
+        totalUSD: parseAmount(row[5]),
+        estimate: parseAmount(row[6]),
+        actual: parseAmount(row[7]),
+        tax: parseAmount(row[8]),
+        actualPostTax: parseAmount(row[9]),
+        rateConversion: parseFloat(row[10]) || 0,
+        category
       })
     }
+    
+    // Debug: Log category counts
+    const coursesCount = incomeEntries.filter(e => e.category === 'course').length
+    const royaltiesCount = incomeEntries.filter(e => e.category === 'royalty').length
+    const miscCount = incomeEntries.filter(e => e.category === 'miscellaneous').length
+    console.log(`Other Income - Categories: Courses=${coursesCount}, Royalties=${royaltiesCount}, Misc=${miscCount}`)
 
-    // Fetch tax summary data (columns J onwards in same sheet)
+    // Fetch tax summary data (columns M onwards in same sheet - Tax Summary table)
+    // Columns: M=Financial Year, N=Total Received USD, O=Total Received INR, P=Other Taxes, Q=Total Tax Due, R=Payment Done, S=Payment Due
     const taxResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Other Income Analytics!J:P',
+      range: 'Other Income Analytics!M:S',
     })
 
     const taxRows = taxResponse.data.values || []
@@ -268,8 +295,10 @@ export async function GET(request: NextRequest) {
         fy: entry.fy,
         totalUSD: 0,
         totalINR: 0,
+        totalINRPostTax: 0,
         courseCount: 0,
         avgCourseEarning: 0,
+        avgCourseEarningPostTax: 0,
         paidCount: 0,
         pendingCount: 0,
         pendingAmount: 0
@@ -277,6 +306,7 @@ export async function GET(request: NextRequest) {
 
       existing.totalUSD += entry.totalUSD
       existing.totalINR += entry.actual || entry.estimate
+      existing.totalINRPostTax += entry.actualPostTax || (entry.actual || entry.estimate)
       existing.courseCount += 1
       
       if (entry.status === 'Paid') {
@@ -292,7 +322,8 @@ export async function GET(request: NextRequest) {
     // Calculate averages
     const fySummaries = Array.from(fyMap.values()).map(fy => ({
       ...fy,
-      avgCourseEarning: fy.courseCount > 0 ? fy.totalINR / fy.courseCount : 0
+      avgCourseEarning: fy.courseCount > 0 ? fy.totalINR / fy.courseCount : 0,
+      avgCourseEarningPostTax: fy.courseCount > 0 ? fy.totalINRPostTax / fy.courseCount : 0
     }))
 
     // Sort by FY (most recent first)
@@ -306,10 +337,11 @@ export async function GET(request: NextRequest) {
     // Calculate overall totals
     const totalEarningsUSD = incomeEntries.reduce((sum, e) => sum + e.totalUSD, 0)
     const totalEarningsINR = incomeEntries.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
+    const totalEarningsINRPostTax = incomeEntries.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
     const totalCourses = courses.length
     const paidCourses = courses.filter(e => e.status === 'Paid').length
     
-    // Pending = entries with "To be Paid" status (check exact status value from Column B)
+    // Pending = entries with "To be Paid" status (check exact status value from Column C now)
     const pendingEntries = incomeEntries.filter(e => 
       e.status.toLowerCase().includes('to be paid') || 
       e.status.toLowerCase() === 'pending' ||
@@ -318,10 +350,13 @@ export async function GET(request: NextRequest) {
     const pendingPayments = pendingEntries.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
     const pendingCount = pendingEntries.length
     
-    // Category-wise totals
+    // Category-wise totals (pre-tax and post-tax)
     const courseEarnings = courses.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
+    const courseEarningsPostTax = courses.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
     const royaltyEarnings = royalties.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
+    const royaltyEarningsPostTax = royalties.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
     const miscEarnings = miscellaneous.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
+    const miscEarningsPostTax = miscellaneous.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
 
     // Tax totals
     const totalTaxesPaid = taxSummaries.reduce((sum, t) => sum + t.paymentDone, 0)
@@ -331,8 +366,9 @@ export async function GET(request: NextRequest) {
       ? ((totalTaxLiability / totalEarningsINR) * 100) 
       : 0
     
-    // Calculate avg course earning (only from actual courses, not royalties)
+    // Calculate avg course earning - USE POST-TAX for courses (actualPostTax)
     const avgCourseEarning = courses.length > 0 ? courseEarnings / courses.length : 0
+    const avgCourseEarningPostTax = courses.length > 0 ? courseEarningsPostTax / courses.length : 0
 
     // Top earning courses (only actual courses with "Published")
     const topCourses = [...courses]
@@ -400,11 +436,13 @@ export async function GET(request: NextRequest) {
       summary: {
         totalEarningsUSD,
         totalEarningsINR,
+        totalEarningsINRPostTax,
         totalCourses,
         paidCourses,
         pendingPayments,
         pendingCount, // Only entries with "To be Paid" status
-        avgCourseEarning, // Only from actual courses (with "Published")
+        avgCourseEarning, // Pre-tax average from courses
+        avgCourseEarningPostTax, // POST-TAX average from courses (actualPostTax)
         avgConversionRate: incomeEntries.length > 0 
           ? incomeEntries.reduce((sum, e) => sum + e.rateConversion, 0) / incomeEntries.length 
           : 0
@@ -415,16 +453,19 @@ export async function GET(request: NextRequest) {
         courses: {
           count: courses.length,
           totalINR: courseEarnings,
+          totalINRPostTax: courseEarningsPostTax,
           entries: courses
         },
         royalties: {
           count: royalties.length,
           totalINR: royaltyEarnings,
+          totalINRPostTax: royaltyEarningsPostTax,
           entries: royalties
         },
         miscellaneous: {
           count: miscellaneous.length,
           totalINR: miscEarnings,
+          totalINRPostTax: miscEarningsPostTax,
           entries: miscellaneous
         }
       },

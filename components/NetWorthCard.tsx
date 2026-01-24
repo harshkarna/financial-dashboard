@@ -376,15 +376,21 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
         />
       )}
 
-      {/* Main Net Worth Card - Premium Dark Theme */}
-      <div className="group relative overflow-hidden bg-gradient-to-br from-emerald-900/50 to-green-900/40 rounded-2xl p-5 border border-emerald-500/30 glow-green hover-lift">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl"></div>
+      {/* Main Net Worth Card - Full Height with Milestone Journey */}
+      <div className="group relative overflow-hidden bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-2xl border border-slate-700/50 hover-lift h-full flex flex-col">
+        {/* Decorative gradient orbs */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
         
-        <div className="relative">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+        {/* Header Section */}
+        <div className="relative p-4 pb-3 border-b border-slate-700/50">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ${
+                isPositive 
+                  ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/30' 
+                  : 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/30'
+              }`}>
                 {isPositive ? (
                   <TrendingUp className="h-5 w-5 text-white" />
                 ) : (
@@ -392,39 +398,59 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
                 )}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
                   Net Worth
                   {currentMilestone && (
-                    <span className="text-xl" title={`${currentMilestone.label} achieved!`}>
+                    <span className="text-lg" title={`${currentMilestone.label} achieved!`}>
                       {currentMilestone.emoji}
                     </span>
                   )}
                 </h2>
-                <p className="text-xs text-emerald-400/70">{month}</p>
+                <p className="text-xs text-slate-400">{month}</p>
               </div>
             </div>
-            <div className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+            <div className={`px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1 ${
               isPositive 
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                 : 'bg-red-500/20 text-red-400 border border-red-500/30'
             }`}>
-              {currentMilestone && <Star className="h-3 w-3" />}
+              <Star className="h-3 w-3" />
               {isPositive ? 'Positive' : 'Negative'}
             </div>
           </div>
+        </div>
+        
+        {/* Main Amount Section */}
+        <div className="relative p-4 pb-3">
+          <p className={`text-4xl md:text-5xl font-black tracking-tight ${
+            isPositive ? 'text-emerald-400' : 'text-red-400'
+          }`}>
+            {!isPositive && '-'}{formattedAmount}
+          </p>
           
-          {/* Net Worth Amount */}
-          <div className="bg-slate-800/50 rounded-xl p-4 mb-4 border border-slate-700/50">
-            <p className={`text-4xl font-black ${
-              isPositive ? 'text-emerald-400' : 'text-red-400'
-            }`}>
-              {!isPositive && '-'}{formattedAmount}
-            </p>
-          </div>
-          
-          {/* Progress to Next Milestone */}
-          {nextMilestone && (
-            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/20">
+          {/* Achieved Milestones Row */}
+          {currentMilestone && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs text-slate-500">Achieved:</span>
+              <div className="flex items-center gap-1">
+                {MILESTONES.filter(m => netWorth >= m.value).map((m) => (
+                  <span 
+                    key={m.value} 
+                    className="text-lg transform hover:scale-125 transition-transform cursor-default"
+                    title={m.label}
+                  >
+                    {m.emoji}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Progress Section */}
+        {nextMilestone && (
+          <div className="relative px-4 pb-3">
+            <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-xl p-3 border border-blue-500/20">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-blue-400" />
@@ -437,7 +463,7 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
                 </span>
               </div>
               
-              <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-slate-700/70 rounded-full h-2 overflow-hidden">
                 <div 
                   className="h-full rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-1000 ease-out relative"
                   style={{ width: `${Math.min(progressToNext, 100)}%` }}
@@ -450,8 +476,48 @@ export function NetWorthCard({ netWorth, month }: NetWorthCardProps) {
                 {formatShort(amountToNext)} more to go!
               </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+        
+        {/* Milestone Timeline - Moved here from Insights */}
+        {milestoneTimelines.length > 0 && (
+          <div className="relative px-4 pb-4 mt-auto border-t border-slate-700/30 pt-3">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-4 w-4 text-amber-400" />
+              <span className="text-sm font-semibold text-slate-300">Milestone Journey</span>
+            </div>
+            <div className="space-y-2">
+              {milestoneTimelines.map((info) => {
+                const years = Math.floor(info.monthsToReach / 12)
+                const months = info.monthsToReach % 12
+                let timeText = ''
+                if (years > 0 && months > 0) {
+                  timeText = `${years}y ${months}m`
+                } else if (years > 0) {
+                  timeText = `${years}y`
+                } else {
+                  timeText = `${months}m`
+                }
+                
+                return (
+                  <div key={info.milestone.value} className="bg-slate-700/30 rounded-lg p-2 border border-slate-600/30">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <span className="text-base">{info.milestone.emoji}</span>
+                        <span className="text-sm font-medium text-white">{info.milestone.label}</span>
+                      </span>
+                      <span className="text-xs font-bold text-amber-400">{info.achievedMonth}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 text-xs text-slate-500">
+                      <span>From {info.journeyStart}</span>
+                      <span className="font-medium text-emerald-400">⏱️ {timeText}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
@@ -666,7 +732,7 @@ export function NetWorthInsights({ netWorth }: NetWorthInsightsProps) {
   }
 
   return (
-    <div className="glass-dark rounded-2xl p-5 glow-amber">
+    <div className="glass-dark rounded-2xl p-5 glow-amber h-full">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-amber-500/30">
@@ -677,11 +743,11 @@ export function NetWorthInsights({ netWorth }: NetWorthInsightsProps) {
 
       {/* Insights List */}
       {insights.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {insights.map((insight, idx) => (
             <div 
               key={idx}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors ${
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-colors ${
                 insight.highlight 
                   ? 'bg-gradient-to-r from-emerald-900/40 to-green-900/30 border border-emerald-500/30' 
                   : 'bg-slate-700/30 hover:bg-slate-700/50 border border-slate-600/30'
@@ -700,45 +766,6 @@ export function NetWorthInsights({ netWorth }: NetWorthInsightsProps) {
         </div>
       )}
 
-      {/* Milestone Journey */}
-      {milestoneTimelines.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-slate-700/50">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="h-4 w-4 text-amber-400" />
-            <span className="text-sm font-semibold text-slate-300">Milestone Journey</span>
-          </div>
-          <div className="space-y-2">
-            {milestoneTimelines.map((info, idx) => {
-              const years = Math.floor(info.monthsToReach / 12)
-              const months = info.monthsToReach % 12
-              let timeText = ''
-              if (years > 0 && months > 0) {
-                timeText = `${years}y ${months}m`
-              } else if (years > 0) {
-                timeText = `${years}y`
-              } else {
-                timeText = `${months}m`
-              }
-              
-              return (
-                <div key={idx} className="bg-slate-700/30 rounded-lg p-2.5 border border-slate-600/30">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2">
-                      <span className="text-lg">{info.milestone.emoji}</span>
-                      <span className="text-sm font-medium text-white">{info.milestone.label}</span>
-                    </span>
-                    <span className="text-sm font-bold text-amber-400">{info.achievedMonth}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1 text-xs text-slate-500">
-                    <span>From {info.journeyStart}</span>
-                    <span className="font-medium text-emerald-400">⏱️ {timeText}</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
