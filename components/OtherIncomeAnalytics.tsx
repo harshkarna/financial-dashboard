@@ -60,6 +60,7 @@ interface IncomeEntry {
 interface CategoryData {
   count: number
   totalINR: number
+  /** Sum of column J for rows in this category */
   totalINRPostTax: number
   entries: IncomeEntry[]
 }
@@ -126,8 +127,9 @@ interface OtherIncomeData {
   summary: {
     totalEarningsUSD: number
     totalEarningsINR: number
+    /** Strict sum of column J (Actual Post Tax) only */
     totalEarningsINRPostTax: number
-    /** Sheet FY table column R (Total row when present) */
+    /** FY summary table — received after tax */
     realEarningsINR: number
     totalCourses: number
     paidCourses: number
@@ -350,82 +352,81 @@ export function OtherIncomeAnalytics() {
         </div>
       </div>
 
-      {/* Summary Cards — first card spans 2 cols: pre-tax, post-tax (entries), real (sheet R) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="col-span-2 glass-dark rounded-2xl p-5 glow-green relative overflow-hidden group hover:scale-[1.01] transition-transform">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shrink-0">
+      {/* Summary — 12-col grid: balanced row on large screens */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-6 glass-dark rounded-2xl p-5 md:p-6 glow-green relative overflow-hidden flex flex-col">
+          <div className="flex items-start gap-3 mb-5">
+            <div className="w-11 h-11 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shrink-0">
               <DollarSign className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Earnings overview</span>
-              <p className="text-xs text-slate-500 mt-1 leading-snug">
-                Gross from line items, post-tax from each line, and received-after-tax from your FY summary table.
+            <div className="min-w-0 flex-1">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wide">Earnings overview</h2>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Gross uses columns G/H (estimate or actual). Post-tax is the sum of column J only.
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl bg-slate-900/40 border border-slate-700/50 p-4">
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Gross (pre-tax)</p>
-              <p className="text-2xl font-black text-white leading-tight">{formatCurrency(summary.totalEarningsINR)}</p>
-              <p className="text-xs text-emerald-400/90 mt-2">{formatCurrency(summary.totalEarningsUSD, 'USD')}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+            <div className="flex flex-col rounded-xl bg-slate-900/50 border border-slate-700/60 p-4 md:p-5 min-h-[132px]">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Gross received</p>
+              <p className="text-2xl md:text-3xl font-black text-white tracking-tight">{formatCurrency(summary.totalEarningsINR)}</p>
+              <p className="text-sm text-emerald-400/90 mt-auto pt-3">{formatCurrency(summary.totalEarningsUSD, 'USD')}</p>
             </div>
-            <div className="rounded-xl bg-slate-900/40 border border-emerald-500/20 p-4">
-              <p className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wide mb-1">Post-tax (lines)</p>
-              <p className="text-2xl font-black text-emerald-300 leading-tight">{formatCurrency(summary.totalEarningsINRPostTax)}</p>
-              <p className="text-xs text-slate-500 mt-2 leading-snug">Adds each row’s post-tax amount (detail tab).</p>
-            </div>
-            <div className="rounded-xl bg-slate-900/40 border border-cyan-500/25 p-4">
-              <p className="text-[10px] font-semibold text-cyan-400/90 uppercase tracking-wide mb-1">Received after tax</p>
-              <p className="text-2xl font-black text-cyan-200 leading-tight">{formatCurrency(summary.realEarningsINR ?? summary.totalEarningsINRPostTax)}</p>
-              <p className="text-xs text-slate-500 mt-2 leading-snug">
-                {taxes.sheetGrandTotals && taxes.sheetGrandTotals.totalReceivedPostTax > 0
-                  ? 'From your FY summary total (post-tax received).'
-                  : 'From FY summary rows, or matches lines if the table is empty.'}
+            <div className="flex flex-col rounded-xl bg-slate-900/50 border border-emerald-500/25 p-4 md:p-5 min-h-[132px]">
+              <p className="text-[11px] font-semibold text-emerald-500/90 uppercase tracking-wide mb-2">Actual post tax</p>
+              <p className="text-2xl md:text-3xl font-black text-emerald-200 tracking-tight">
+                {formatCurrency(summary.totalEarningsINRPostTax)}
               </p>
+              <p className="text-xs text-slate-500 mt-auto pt-3 leading-snug">Sum of every row in Actual Post Tax (column J).</p>
             </div>
           </div>
+          {summary.realEarningsINR > 0 &&
+            Math.abs(summary.realEarningsINR - summary.totalEarningsINRPostTax) > 500 && (
+              <p className="text-xs text-slate-500 mt-4 pt-4 border-t border-slate-700/50 leading-relaxed">
+                FY summary table (after tax): <span className="text-slate-300 font-semibold tabular-nums">{formatCurrency(summary.realEarningsINR)}</span>
+                {' — '}cross-checks your tax block; detail rows above use column J.
+              </p>
+            )}
           <Sparkles className="absolute -right-2 -bottom-2 w-24 h-24 text-emerald-500/10 pointer-events-none" />
         </div>
 
-        {/* Published Courses */}
-        <div className="glass-dark rounded-2xl p-5 glow-blue relative overflow-hidden group hover:scale-[1.02] transition-transform">
+        <div className="lg:col-span-2 glass-dark rounded-2xl p-5 glow-blue flex flex-col min-h-[200px] lg:min-h-0 relative overflow-hidden">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center shrink-0">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Published Courses</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide leading-tight">Published courses</span>
           </div>
-          <p className="text-3xl font-black text-white mb-1">{categories.courses.count}</p>
-          <p className="text-sm text-blue-400">{formatCurrency(categories.courses.totalINR)} earned</p>
-          <Target className="absolute -right-2 -bottom-2 w-20 h-20 text-blue-500/10" />
+          <p className="text-3xl font-black text-white tabular-nums">{categories.courses.count}</p>
+          <p className="text-xl font-bold text-white mt-2 tabular-nums">{formatCurrency(categories.courses.totalINR)}</p>
+          <p className="text-xs text-slate-500 mt-1">Gross (Actual or Estimate)</p>
+          <p className="text-sm font-semibold text-cyan-300/90 mt-3 tabular-nums">{formatCurrency(categories.courses.totalINRPostTax)} post-tax</p>
+          <Target className="absolute -right-2 -bottom-2 w-20 h-20 text-blue-500/10 pointer-events-none hidden sm:block" />
         </div>
 
-        {/* Avg Per Course (only from published courses) - POST TAX */}
-        <div className="glass-dark rounded-2xl p-5 glow-purple relative overflow-hidden group hover:scale-[1.02] transition-transform">
+        <div className="lg:col-span-2 glass-dark rounded-2xl p-5 glow-purple relative overflow-hidden flex flex-col min-h-[200px] lg:min-h-0">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shrink-0">
               <Award className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Avg/Course</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Avg / course</span>
           </div>
-          <p className="text-3xl font-black text-white mb-1">{formatCurrency(summary.avgCourseEarningPostTax)}</p>
-          <p className="text-sm text-emerald-400 mb-1">Post-tax per course</p>
-          <p className="text-xs text-slate-500">Pre-tax: {formatCurrency(summary.avgCourseEarning)}</p>
-          <Award className="absolute -right-2 -bottom-2 w-20 h-20 text-purple-500/10" />
+          <p className="text-2xl md:text-3xl font-black text-white tabular-nums">{formatCurrency(summary.avgCourseEarningPostTax)}</p>
+          <p className="text-xs text-emerald-400/90 mt-2">Post-tax average</p>
+          <p className="text-xs text-slate-500 mt-auto pt-2">Pre-tax avg: {formatCurrency(summary.avgCourseEarning)}</p>
+          <Award className="absolute -right-2 -bottom-2 w-20 h-20 text-purple-500/10 pointer-events-none hidden sm:block" />
         </div>
 
-        {/* Pending Payments */}
-        <div className="glass-dark rounded-2xl p-5 glow-amber relative overflow-hidden group hover:scale-[1.02] transition-transform">
+        <div className="lg:col-span-2 glass-dark rounded-2xl p-5 glow-amber relative overflow-hidden flex flex-col min-h-[200px] lg:min-h-0">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Pending</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Pending</span>
           </div>
-          <p className="text-3xl font-black text-amber-400 mb-1">{formatCurrency(summary.pendingPayments)}</p>
-          <p className="text-sm text-slate-400">{summary.pendingCount} invoices awaiting</p>
-          <Receipt className="absolute -right-2 -bottom-2 w-20 h-20 text-amber-500/10" />
+          <p className="text-2xl md:text-3xl font-black text-amber-400 tabular-nums">{formatCurrency(summary.pendingPayments)}</p>
+          <p className="text-sm text-slate-400 mt-auto pt-2">{summary.pendingCount} invoice{summary.pendingCount !== 1 ? 's' : ''} awaiting</p>
+          <Receipt className="absolute -right-2 -bottom-2 w-20 h-20 text-amber-500/10 pointer-events-none hidden sm:block" />
         </div>
       </div>
 
@@ -443,33 +444,36 @@ export function OtherIncomeAnalytics() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Courses */}
-          <div className="p-4 bg-gradient-to-br from-blue-900/40 to-cyan-900/30 rounded-xl border border-blue-500/30">
+          <div className="p-4 bg-gradient-to-br from-blue-900/40 to-cyan-900/30 rounded-xl border border-blue-500/30 flex flex-col min-h-[120px]">
             <div className="flex items-center gap-2 mb-2">
-              <BookOpen className="w-4 h-4 text-blue-400" />
-              <span className="text-sm font-medium text-blue-400">Published Courses</span>
+              <BookOpen className="w-4 h-4 text-blue-400 shrink-0" />
+              <span className="text-sm font-medium text-blue-400">Published courses</span>
             </div>
-            <p className="text-2xl font-black text-white">{formatCurrency(categories.courses.totalINR)}</p>
-            <p className="text-xs text-slate-400 mt-1">{categories.courses.count} courses</p>
+            <p className="text-2xl font-black text-white tabular-nums">{formatCurrency(categories.courses.totalINR)}</p>
+            <p className="text-xs text-slate-400 mt-1">Gross · {categories.courses.count} courses</p>
+            <p className="text-sm font-semibold text-cyan-300/90 mt-2 tabular-nums">{formatCurrency(categories.courses.totalINRPostTax)} post-tax (col J)</p>
           </div>
           
           {/* Royalties */}
-          <div className="p-4 bg-gradient-to-br from-purple-900/40 to-pink-900/30 rounded-xl border border-purple-500/30">
+          <div className="p-4 bg-gradient-to-br from-purple-900/40 to-pink-900/30 rounded-xl border border-purple-500/30 flex flex-col min-h-[120px]">
             <div className="flex items-center gap-2 mb-2">
-              <Wallet className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-400">Quarterly Royalties</span>
+              <Wallet className="w-4 h-4 text-purple-400 shrink-0" />
+              <span className="text-sm font-medium text-purple-400">Quarterly royalties</span>
             </div>
-            <p className="text-2xl font-black text-white">{formatCurrency(categories.royalties.totalINR)}</p>
-            <p className="text-xs text-slate-400 mt-1">{categories.royalties.count} quarters</p>
+            <p className="text-2xl font-black text-white tabular-nums">{formatCurrency(categories.royalties.totalINR)}</p>
+            <p className="text-xs text-slate-400 mt-1">Gross · {categories.royalties.count} quarters</p>
+            <p className="text-sm font-semibold text-cyan-300/90 mt-2 tabular-nums">{formatCurrency(categories.royalties.totalINRPostTax)} post-tax</p>
           </div>
           
           {/* Miscellaneous */}
-          <div className="p-4 bg-gradient-to-br from-amber-900/40 to-orange-900/30 rounded-xl border border-amber-500/30">
+          <div className="p-4 bg-gradient-to-br from-amber-900/40 to-orange-900/30 rounded-xl border border-amber-500/30 flex flex-col min-h-[120px]">
             <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+              <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
               <span className="text-sm font-medium text-amber-400">Miscellaneous</span>
             </div>
-            <p className="text-2xl font-black text-white">{formatCurrency(categories.miscellaneous.totalINR)}</p>
-            <p className="text-xs text-slate-400 mt-1">{categories.miscellaneous.count} entries (referrals, etc.)</p>
+            <p className="text-2xl font-black text-white tabular-nums">{formatCurrency(categories.miscellaneous.totalINR)}</p>
+            <p className="text-xs text-slate-400 mt-1">Gross · {categories.miscellaneous.count} entries</p>
+            <p className="text-sm font-semibold text-cyan-300/90 mt-2 tabular-nums">{formatCurrency(categories.miscellaneous.totalINRPostTax)} post-tax</p>
           </div>
         </div>
       </div>

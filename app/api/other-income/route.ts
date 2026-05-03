@@ -245,7 +245,7 @@ interface FYSummary {
 export async function GET(request: NextRequest) {
   try {
     // Check cache first
-    const cached = cache.get('other-income-v3')
+    const cached = cache.get('other-income-v4')
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       console.log('Returning cached other-income data')
       return NextResponse.json(cached.data)
@@ -399,7 +399,7 @@ export async function GET(request: NextRequest) {
 
       existing.totalUSD += entry.totalUSD
       existing.totalINR += entry.actual || entry.estimate
-      existing.totalINRPostTax += entry.actualPostTax || (entry.actual || entry.estimate)
+      existing.totalINRPostTax += entry.actualPostTax || 0
       existing.courseCount += 1
       
       if (entry.status === 'Paid') {
@@ -430,7 +430,8 @@ export async function GET(request: NextRequest) {
     // Calculate overall totals
     const totalEarningsUSD = incomeEntries.reduce((sum, e) => sum + e.totalUSD, 0)
     const totalEarningsINR = incomeEntries.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
-    const totalEarningsINRPostTax = incomeEntries.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
+    /** Column J only (Actual Post Tax); no fallback to Actual/Estimate */
+    const totalEarningsINRPostTax = incomeEntries.reduce((sum, e) => sum + (e.actualPostTax || 0), 0)
     const totalCourses = courses.length
     const paidCourses = courses.filter(e => e.status === 'Paid').length
     
@@ -445,11 +446,11 @@ export async function GET(request: NextRequest) {
     
     // Category-wise totals (pre-tax and post-tax)
     const courseEarnings = courses.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
-    const courseEarningsPostTax = courses.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
+    const courseEarningsPostTax = courses.reduce((sum, e) => sum + (e.actualPostTax || 0), 0)
     const royaltyEarnings = royalties.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
-    const royaltyEarningsPostTax = royalties.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
+    const royaltyEarningsPostTax = royalties.reduce((sum, e) => sum + (e.actualPostTax || 0), 0)
     const miscEarnings = miscellaneous.reduce((sum, e) => sum + (e.actual || e.estimate), 0)
-    const miscEarningsPostTax = miscellaneous.reduce((sum, e) => sum + (e.actualPostTax || e.actual || e.estimate), 0)
+    const miscEarningsPostTax = miscellaneous.reduce((sum, e) => sum + (e.actualPostTax || 0), 0)
 
     // Tax totals
     const totalTaxesPaid = taxSummaries.reduce((sum, t) => sum + t.paymentDone, 0)
@@ -537,8 +538,9 @@ export async function GET(request: NextRequest) {
       summary: {
         totalEarningsUSD,
         totalEarningsINR,
+        /** Sum of column J (Actual Post Tax) across all detail rows */
         totalEarningsINRPostTax,
-        /** Sheet column R total(s) — actual received post tax (FY table / Total row) */
+        /** FY summary table — received after tax (column R / Total row) */
         realEarningsINR,
         totalCourses,
         paidCourses,
@@ -608,7 +610,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the result
-    cache.set('other-income-v3', { data: result, timestamp: Date.now() })
+    cache.set('other-income-v4', { data: result, timestamp: Date.now() })
 
     return NextResponse.json(result)
 
