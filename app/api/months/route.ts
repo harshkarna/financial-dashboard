@@ -56,24 +56,23 @@ export async function GET(request: NextRequest) {
     const headerRow = rows[headerRowIndex]
     
     // Extract month columns (skip first 3 columns: Category, Type, Item)
+    // Match sheets API: any non-empty header after Item except "#", not only "Mon-YY" format
     const monthColumns = headerRow.slice(3).filter(header => {
       const trimmed = header?.toString().trim()
-      return trimmed && trimmed !== '#' && trimmed.includes('-')
+      return Boolean(trimmed && trimmed !== '#')
     })
-    
-    // Convert month headers to display format
+
+    // Convert month headers to display format (hyphenated sheet labels → "Apr 2025")
     const months = monthColumns.map(month => {
       const trimmed = month.toString().trim()
-      // Convert "Apr-25" to "Apr 2025", etc.
       if (trimmed.includes('-')) {
         const [monthName, year] = trimmed.split('-')
         const fullYear = year.length === 2 ? `20${year}` : year
-        
-        // Handle "July-25" case specifically
+
         if (monthName === 'July') {
           return `Jul ${fullYear}`
         }
-        
+
         return `${monthName} ${fullYear}`
       }
       return trimmed

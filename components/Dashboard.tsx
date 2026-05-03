@@ -47,16 +47,58 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
     }
   }, [selectedMonth])
 
+  const sheetHeaderToDisplay = (header: string) => {
+    const trimmed = header?.toString().trim()
+    if (!trimmed) return ''
+    if (trimmed.includes('-')) {
+      const [monthName, year] = trimmed.split('-')
+      const fullYear = year.length === 2 ? `20${year}` : year
+      if (monthName === 'July') return `Jul ${fullYear}`
+      return `${monthName} ${fullYear}`
+    }
+    return trimmed
+  }
+
   const fetchMonths = async () => {
     try {
       const response = await fetch('/api/months')
-      if (response.ok) {
-        const result = await response.json()
-        setMonths(result.months)
-        if (result.months.length > 0) {
-          setSelectedMonth(result.months[0])
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Your Google session expired. Sign out and sign in again to reload the sheet.')
+        } else {
+          setError('Could not load month list from the sheet. Try again or check your connection.')
         }
+        setLoading(false)
+        return
       }
+
+      const result = await response.json()
+      const list: string[] = Array.isArray(result.months) ? result.months : []
+
+      if (list.length > 0) {
+        setMonths(list)
+        setSelectedMonth(list[0])
+        return
+      }
+
+      // Months list empty (e.g. header format mismatch) — still load latest column from sheets API
+      const sheetsRes = await fetch('/api/sheets')
+      if (sheetsRes.ok) {
+        const sheetData = await sheetsRes.json()
+        const label = sheetHeaderToDisplay(sheetData.selectedMonth || '')
+        if (label) {
+          setMonths([label])
+          setSelectedMonth(label)
+          // Keep loading until fetchData(selectedMonth) runs from useEffect
+          return
+        }
+        setError('No month columns found on the Net Worth tab. Add dated columns after the Item column.')
+      } else if (sheetsRes.status === 401) {
+        setError('Your Google session expired. Sign out and sign in again.')
+      } else {
+        setError('No months detected and latest sheet data could not be loaded.')
+      }
+      setLoading(false)
     } catch (err) {
       console.error('Error fetching months:', err)
       const fallbackMonths = ['Sep 2025', 'Aug 2025', 'Jul 2025', 'Jun 2025', 'May 2025', 'Apr 2025']

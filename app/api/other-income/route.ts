@@ -144,6 +144,19 @@ interface TaxSummary {
   totalReceivedINR: number
   otherTaxes: number
   totalTaxDue: number
+  /** Column R — sheet total received post tax per FY */
+  totalReceivedPostTax: number
+  paymentDone: number
+  paymentDue: number
+}
+
+/** Optional "Total" row from sheet (L:T) for authoritative aggregates */
+interface SheetTaxGrandTotals {
+  totalReceivedUSD: number
+  totalReceivedINR: number
+  otherTaxes: number
+  totalTaxDue: number
+  totalReceivedPostTax: number
   paymentDone: number
   paymentDue: number
 }
@@ -244,44 +257,72 @@ export async function GET(request: NextRequest) {
     const miscCount = incomeEntries.filter(e => e.category === 'miscellaneous').length
     console.log(`Other Income - Categories: Courses=${coursesCount}, Royalties=${royaltiesCount}, Misc=${miscCount}`)
 
-    // Fetch tax summary data (columns M onwards in same sheet - Tax Summary table)
-    // Columns: M=Financial Year, N=Total Received USD, O=Total Received INR, P=Other Taxes, Q=Total Tax Due, R=Payment Done, S=Payment Due
+    // Tax summary table: L=FY, M=USD, N=INR, O=Other taxes, P=Tax due, Q=(spacer), R=Post-tax received, S=Paid, T=Due
+    // Fetch L:T so column R is included. If column L is empty (legacy layout starting at M), detect FY in column M.
     const taxResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Other Income Analytics!M:S',
+      range: 'Other Income Analytics!L:T',
     })
 
     const taxRows = taxResponse.data.values || []
-    
-    // Parse tax summary (skip header row)
+
+    const parseAmount = (val: string | undefined): number => {
+      if (!val) return 0
+      const cleaned = val.toString().replace(/[₹$,\s]/g, '')
+      return parseFloat(cleaned) || 0
+    }
+
+    let sheetGrandTotals: SheetTaxGrandTotals | null = null
     const taxSummaries: TaxSummary[] = []
+
     for (let i = 1; i < taxRows.length; i++) {
       const row = taxRows[i]
-      if (!row[0]) continue // Skip empty rows
-      
-      const fyValue = row[0]?.toString() || ''
-      
-      // Skip header-like rows and total rows
-      if (fyValue.toLowerCase().includes('financial year') || 
-          fyValue.toLowerCase() === 'total' ||
-          fyValue.toLowerCase().includes('fy total')) {
+      const colL = row[0]?.toString().trim() || ''
+      const colM = row[1]?.toString().trim() || ''
+      const looksLikeFY = (s: string) => /^\d{4}-\d{2}/.test(s) || /^\d{4}\/\d{2}/.test(s)
+
+      // Legacy: FY in M when L is blank
+      const base = !colL && looksLikeFY(colM) ? 1 : 0
+      let fyRaw = (row[base] || '').toString().trim()
+      if (!fyRaw && colM.toLowerCase() === 'total') fyRaw = colM
+      if (!fyRaw) continue
+
+      const fyLower = fyRaw.toLowerCase()
+      if (fyLower.includes('financial year')) continue
+
+      if (fyLower === 'total' || fyLower.includes('fy total')) {
+        const labelIsInL =
+          colL.toLowerCase() === 'total' || colL.toLowerCase().includes('total')
+        const start = labelIsInL ? 1 : colM.toLowerCase() === 'total' ? 2 : 1
+        sheetGrandTotals = {
+          totalReceivedUSD: parseAmount(row[start]),
+          totalReceivedINR: parseAmount(row[start + 1]),
+          otherTaxes: parseAmount(row[start + 2]),
+          totalTaxDue: parseAmount(row[start + 3]),
+          totalReceivedPostTax: parseAmount(row[start + 5]),
+          paymentDone: parseAmount(row[start + 6]),
+          paymentDue: parseAmount(row[start + 7]),
+        }
         continue
       }
-      
-      const parseAmount = (val: string): number => {
-        if (!val) return 0
-        const cleaned = val.toString().replace(/[₹$,\s]/g, '')
-        return parseFloat(cleaned) || 0
-      }
+
+      const usd = parseAmount(row[base + 1])
+      const inr = parseAmount(row[base + 2])
+      const otherTaxes = parseAmount(row[base + 3])
+      const taxDue = parseAmount(row[base + 4])
+      const postTax = base === 0 ? parseAmount(row[base + 6]) : 0
+      const paid = base === 0 ? parseAmount(row[base + 7]) : parseAmount(row[base + 5])
+      const due = base === 0 ? parseAmount(row[base + 8]) : parseAmount(row[base + 6])
 
       taxSummaries.push({
-        fy: fyValue,
-        totalReceivedUSD: parseAmount(row[1]),
-        totalReceivedINR: parseAmount(row[2]),
-        otherTaxes: parseAmount(row[3]),
-        totalTaxDue: parseAmount(row[4]),
-        paymentDone: parseAmount(row[5]),
-        paymentDue: parseAmount(row[6])
+        fy: fyRaw,
+        totalReceivedUSD: usd,
+        totalReceivedINR: inr,
+        otherTaxes,
+        totalTaxDue: taxDue,
+        totalReceivedPostTax: postTax,
+        paymentDone: paid,
+        paymentDue: due,
       })
     }
 
@@ -431,12 +472,22 @@ export async function GET(request: NextRequest) {
       ? ((currentFYData?.totalINR || 0) - previousFYData.totalINR) / previousFYData.totalINR * 100
       : 0
 
+    const summedPostTaxFY = taxSummaries.reduce((sum, t) => sum + t.totalReceivedPostTax, 0)
+    const realEarningsINR =
+      sheetGrandTotals && sheetGrandTotals.totalReceivedPostTax > 0
+        ? sheetGrandTotals.totalReceivedPostTax
+        : summedPostTaxFY > 0
+          ? summedPostTaxFY
+          : totalEarningsINRPostTax
+
     const result = {
       // Summary stats
       summary: {
         totalEarningsUSD,
         totalEarningsINR,
         totalEarningsINRPostTax,
+        /** Sheet column R total(s) — actual received post tax (FY table / Total row) */
+        realEarningsINR,
         totalCourses,
         paidCourses,
         pendingPayments,
@@ -476,7 +527,8 @@ export async function GET(request: NextRequest) {
         totalTaxesDue,
         totalTaxLiability,
         effectiveTaxRate,
-        byFY: taxSummaries
+        byFY: taxSummaries,
+        sheetGrandTotals,
       },
 
       // FY breakdown

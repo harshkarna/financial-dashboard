@@ -1,7 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-import { TrendingUp, TrendingDown, Target, Zap, Award, BarChart3 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { TrendingUp, TrendingDown, Target, Award, BarChart3 } from 'lucide-react'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts'
 
 interface EarningRecord {
   month: string
@@ -21,9 +31,31 @@ interface EarningsInsightsProps {
   allData: EarningRecord[]
 }
 
+const MONTH_ORDER = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function monthNameToIndex(name: string): number {
+  const i = MONTH_ORDER.indexOf((name || '').trim())
+  return i >= 0 ? i : -1
+}
+
+function maxMonthIndexForYear(year: number, records: EarningRecord[]): number {
+  let max = -1
+  for (const r of records) {
+    if (r.year !== year) continue
+    const idx = monthNameToIndex(r.monthName)
+    if (idx > max) max = idx
+  }
+  return max
+}
+
 export function EarningsInsights({ data, selectedYear, allData }: EarningsInsightsProps) {
   const [savingPeriod, setSavingPeriod] = useState<3 | 6 | 12>(3)
   const [investmentPeriod, setInvestmentPeriod] = useState<3 | 6 | 12>(6)
+  /** YTD = same calendar months in both years; full = every logged month in each year */
+  const [yoyMode, setYoyMode] = useState<'ytd' | 'full-year'>('ytd')
+  /** Bars to show in the YoY chart */
+  const [yoyChartMetrics, setYoyChartMetrics] = useState<'income-saving' | 'income-saving-invest' | 'four-way'>('income-saving')
+  const [compareWithYear, setCompareWithYear] = useState<number | null>(null)
 
   const formatCurrency = (amount: number) => {
     if (amount >= 10000000) {
@@ -134,27 +166,110 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
     }
   }
 
-  const getYearComparison = () => {
-    if (!selectedYear || selectedYear === 2025) return null
+  const priorYearOptions = useMemo(() => {
+    if (selectedYear == null) return [] as number[]
+    return Array.from(new Set(allData.map((r) => r.year)))
+      .filter((y) => y < selectedYear)
+      .sort((a, b) => b - a)
+  }, [allData, selectedYear])
 
-    const currentYearData = allData.filter(r => r.year === selectedYear)
-    const previousYearData = allData.filter(r => r.year === selectedYear - 1)
+  useEffect(() => {
+    if (selectedYear == null) {
+      setCompareWithYear(null)
+      return
+    }
+    const opts = Array.from(new Set(allData.map((r) => r.year)))
+      .filter((y) => y < selectedYear)
+      .sort((a, b) => b - a)
+    setCompareWithYear((prev) => (prev != null && opts.includes(prev) ? prev : opts[0] ?? null))
+  }, [selectedYear, allData])
 
-    if (currentYearData.length === 0 || previousYearData.length === 0) return null
+  const yoyAnalysis = useMemo(() => {
+    if (selectedYear == null || compareWithYear == null) return null
+    const y = selectedYear
+    const p = compareWithYear
+    const maxY = maxMonthIndexForYear(y, allData)
+    const maxP = maxMonthIndexForYear(p, allData)
+    if (maxY < 0 || maxP < 0) return null
 
-    const currentIncome = currentYearData.reduce((sum, r) => sum + r.income, 0)
-    const previousIncome = previousYearData.reduce((sum, r) => sum + r.income, 0)
-    const incomeChange = previousIncome > 0 ? ((currentIncome - previousIncome) / previousIncome) * 100 : 0
+    let endIdx: number | null = null
+    if (yoyMode === 'ytd') {
+      const cal = new Date()
+      if (y === cal.getFullYear()) {
+        endIdx = Math.min(cal.getMonth(), maxY, maxP)
+      } else {
+        endIdx = Math.min(maxY, maxP)
+      }
+      if (endIdx < 0) return null
+    }
 
-    const currentSaving = currentYearData.reduce((sum, r) => sum + r.saving, 0)
-    const previousSaving = previousYearData.reduce((sum, r) => sum + r.saving, 0)
-    const savingChange = previousSaving > 0 ? ((currentSaving - previousSaving) / previousSaving) * 100 : 0
+    const sumThrough = (year: number, end: number | null) => {
+      const arr = allData.filter((r) => {
+        if (r.year !== year) return false
+        if (end == null) return true
+        const mi = monthNameToIndex(r.monthName)
+        return mi >= 0 && mi <= end
+      })
+      return {
+        income: arr.reduce((s, r) => s + r.income, 0),
+        saving: arr.reduce((s, r) => s + r.saving, 0),
+        invest: arr.reduce((s, r) => s + r.invest, 0),
+        expenditure: arr.reduce((s, r) => s + r.expenditure, 0),
+      }
+    }
 
-    return { incomeChange, savingChange, previousYear: selectedYear - 1 }
-  }
+    const current = sumThrough(y, endIdx)
+    const previous = sumThrough(p, endIdx)
+
+    const periodLabel =
+      yoyMode === 'full-year'
+        ? `All logged months • ${y} vs ${p}`
+        : `Same period (Jan–${MONTH_ORDER[endIdx!]}) • ${y} vs ${p}`
+
+    const incomeChange =
+      previous.income > 0 ? ((current.income - previous.income) / previous.income) * 100 : 0
+    const savingChange =
+      previous.saving > 0 ? ((current.saving - previous.saving) / previous.saving) * 100 : 0
+
+    return {
+      current,
+      previous,
+      periodLabel,
+      endIdx,
+      incomeChange,
+      savingChange,
+      y,
+      p,
+    }
+  }, [selectedYear, compareWithYear, allData, yoyMode])
+
+  const yoyChartRows = useMemo(() => {
+    if (!yoyAnalysis) return []
+    const { current, previous } = yoyAnalysis
+    const row = (name: string, key: 'income' | 'saving' | 'invest' | 'expenditure') => ({
+      name,
+      current: current[key],
+      prior: previous[key],
+    })
+    switch (yoyChartMetrics) {
+      case 'income-saving':
+        return [row('Income', 'income'), row('Saving', 'saving')]
+      case 'income-saving-invest':
+        return [row('Income', 'income'), row('Saving', 'saving'), row('Investment', 'invest')]
+      case 'four-way':
+        return [
+          row('Income', 'income'),
+          row('Expenses', 'expenditure'),
+          row('Saving', 'saving'),
+          row('Investment', 'invest'),
+        ]
+      default:
+        return []
+    }
+  }, [yoyAnalysis, yoyChartMetrics])
 
   const insights = calculateInsights()
-  const yearComparison = getYearComparison()
+  const yearComparison = yoyAnalysis
 
   if (!insights) {
     return (
@@ -364,23 +479,114 @@ export function EarningsInsights({ data, selectedYear, allData }: EarningsInsigh
           
           {yearComparison ? (
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
-                <span className="text-sm text-slate-400">Income Growth</span>
-                <div className="text-right">
-                  <div className={`text-sm font-bold ${yearComparison.incomeChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {yearComparison.incomeChange >= 0 ? '+' : ''}{formatPercent(yearComparison.incomeChange)}
-                  </div>
-                  <div className="text-xs text-slate-500">vs {yearComparison.previousYear}</div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                <p className="text-xs text-slate-400 leading-relaxed max-w-xl">{yearComparison.periodLabel}</p>
+                <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <select
+                    value={yoyMode}
+                    onChange={(e) => setYoyMode(e.target.value as 'ytd' | 'full-year')}
+                    className="appearance-none bg-slate-900/80 text-white text-xs px-3 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-500 font-medium min-w-[160px]"
+                    aria-label="Comparison period"
+                  >
+                    <option value="ytd">Same months (YTD-style)</option>
+                    <option value="full-year">All logged months each year</option>
+                  </select>
+                  {priorYearOptions.length > 1 && (
+                    <select
+                      value={compareWithYear ?? ''}
+                      onChange={(e) => setCompareWithYear(parseInt(e.target.value, 10))}
+                      className="appearance-none bg-slate-900/80 text-white text-xs px-3 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-500 font-medium min-w-[140px]"
+                      aria-label="Year to compare against"
+                    >
+                      {priorYearOptions.map((py) => (
+                        <option key={py} value={py}>
+                          vs {py}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <select
+                    value={yoyChartMetrics}
+                    onChange={(e) =>
+                      setYoyChartMetrics(
+                        e.target.value as 'income-saving' | 'income-saving-invest' | 'four-way'
+                      )
+                    }
+                    className="appearance-none bg-slate-900/80 text-white text-xs px-3 py-2 rounded-lg border border-slate-600 focus:outline-none focus:border-amber-500 font-medium min-w-[180px]"
+                    aria-label="Metrics to show in chart"
+                  >
+                    <option value="income-saving">Chart: Income & Saving</option>
+                    <option value="income-saving-invest">Chart: + Investment</option>
+                    <option value="four-way">Chart: Income, Expenses, Saving, Invest</option>
+                  </select>
                 </div>
               </div>
-              
-              <div className="flex justify-between items-center py-3 border-b border-slate-700/50">
-                <span className="text-sm text-slate-400">Saving Growth</span>
-                <div className="text-right">
-                  <div className={`text-sm font-bold ${yearComparison.savingChange >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {yearComparison.savingChange >= 0 ? '+' : ''}{formatPercent(yearComparison.savingChange)}
+
+              <div className="h-[260px] w-full min-h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={yoyChartRows} margin={{ top: 8, right: 8, left: 4, bottom: 4 }} barGap={4} barCategoryGap="18%">
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#475569' }} />
+                    <YAxis
+                      tickFormatter={(v) => formatCurrency(Number(v))}
+                      tick={{ fill: '#94a3b8', fontSize: 10 }}
+                      width={56}
+                      axisLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(148,163,184,0.08)' }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null
+                        return (
+                          <div className="rounded-xl border border-slate-600 bg-slate-900/95 px-3 py-2 shadow-xl text-xs">
+                            <p className="font-semibold text-white mb-1">{label}</p>
+                            {payload.map((item) => (
+                              <p
+                                key={String(item.dataKey)}
+                                className="font-medium"
+                                style={{ color: item.color as string }}
+                              >
+                                {String(item.name)}: {formatCurrency(Number(item.value))}
+                              </p>
+                            ))}
+                          </div>
+                        )
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+                      formatter={(value) => <span className="text-slate-300">{value}</span>}
+                    />
+                    <Bar dataKey="current" name={`${yearComparison.y}`} fill="#34d399" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                    <Bar dataKey="prior" name={`${yearComparison.p}`} fill="#64748b" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="rounded-xl bg-slate-800/50 border border-slate-700/60 px-4 py-3">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide">Income change</span>
+                  <div
+                    className={`text-lg font-bold mt-0.5 ${
+                      yearComparison.incomeChange >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    }`}
+                  >
+                    {yearComparison.incomeChange >= 0 ? '+' : ''}
+                    {formatPercent(yearComparison.incomeChange)}
                   </div>
-                  <div className="text-xs text-slate-500">vs {yearComparison.previousYear}</div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">vs {yearComparison.p}</div>
+                </div>
+                <div className="rounded-xl bg-slate-800/50 border border-slate-700/60 px-4 py-3">
+                  <span className="text-xs text-slate-500 uppercase tracking-wide">Saving change</span>
+                  <div
+                    className={`text-lg font-bold mt-0.5 ${
+                      yearComparison.savingChange >= 0 ? 'text-emerald-400' : 'text-red-400'
+                    }`}
+                  >
+                    {yearComparison.savingChange >= 0 ? '+' : ''}
+                    {formatPercent(yearComparison.savingChange)}
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-0.5">vs {yearComparison.p}</div>
                 </div>
               </div>
             </div>

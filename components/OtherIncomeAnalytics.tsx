@@ -70,6 +70,18 @@ interface TaxByFY {
   totalReceivedINR: number
   otherTaxes: number
   totalTaxDue: number
+  /** Sheet column R per FY */
+  totalReceivedPostTax: number
+  paymentDone: number
+  paymentDue: number
+}
+
+interface SheetGrandTotals {
+  totalReceivedUSD: number
+  totalReceivedINR: number
+  otherTaxes: number
+  totalTaxDue: number
+  totalReceivedPostTax: number
   paymentDone: number
   paymentDue: number
 }
@@ -115,6 +127,8 @@ interface OtherIncomeData {
     totalEarningsUSD: number
     totalEarningsINR: number
     totalEarningsINRPostTax: number
+    /** Sheet FY table column R (Total row when present) */
+    realEarningsINR: number
     totalCourses: number
     paidCourses: number
     pendingPayments: number
@@ -134,6 +148,7 @@ interface OtherIncomeData {
     totalTaxLiability: number
     effectiveTaxRate: number
     byFY: TaxByFY[]
+    sheetGrandTotals?: SheetGrandTotals | null
   }
   fyBreakdown: FYSummary[]
   fyComparison: {
@@ -335,19 +350,40 @@ export function OtherIncomeAnalytics() {
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards — first card spans 2 cols: pre-tax, post-tax (entries), real (sheet R) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Earnings */}
-        <div className="glass-dark rounded-2xl p-5 glow-green relative overflow-hidden group hover:scale-[1.02] transition-transform">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center">
+        <div className="col-span-2 glass-dark rounded-2xl p-5 glow-green relative overflow-hidden group hover:scale-[1.01] transition-transform">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl flex items-center justify-center shrink-0">
               <DollarSign className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Total Earnings</span>
+            <div>
+              <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Earnings overview</span>
+              <p className="text-[11px] text-slate-500 mt-0.5">Pre-tax from rows · Post-tax from rows · Real = FY sheet col R</p>
+            </div>
           </div>
-          <p className="text-3xl font-black text-white mb-1">{formatCurrency(summary.totalEarningsINR)}</p>
-          <p className="text-sm text-emerald-400">{formatCurrency(summary.totalEarningsUSD, 'USD')}</p>
-          <Sparkles className="absolute -right-2 -bottom-2 w-20 h-20 text-emerald-500/10" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="rounded-xl bg-slate-900/40 border border-slate-700/50 p-4">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Total (pre-tax)</p>
+              <p className="text-2xl font-black text-white leading-tight">{formatCurrency(summary.totalEarningsINR)}</p>
+              <p className="text-xs text-emerald-400/90 mt-1">{formatCurrency(summary.totalEarningsUSD, 'USD')}</p>
+            </div>
+            <div className="rounded-xl bg-slate-900/40 border border-emerald-500/20 p-4">
+              <p className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wide mb-1">Post tax (entries)</p>
+              <p className="text-2xl font-black text-emerald-300 leading-tight">{formatCurrency(summary.totalEarningsINRPostTax)}</p>
+              <p className="text-[11px] text-slate-500 mt-1">Sum of &quot;Actual Post Tax&quot; per line</p>
+            </div>
+            <div className="rounded-xl bg-slate-900/40 border border-cyan-500/25 p-4">
+              <p className="text-[10px] font-semibold text-cyan-400/90 uppercase tracking-wide mb-1">Real earnings</p>
+              <p className="text-2xl font-black text-cyan-200 leading-tight">{formatCurrency(summary.realEarningsINR ?? summary.totalEarningsINRPostTax)}</p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {taxes.sheetGrandTotals?.totalReceivedPostTax
+                  ? 'Total row · col R (received post tax)'
+                  : 'Per-FY col R or entry totals'}
+              </p>
+            </div>
+          </div>
+          <Sparkles className="absolute -right-2 -bottom-2 w-24 h-24 text-emerald-500/10 pointer-events-none" />
         </div>
 
         {/* Published Courses */}
@@ -665,10 +701,16 @@ export function OtherIncomeAnalytics() {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-4 gap-4 mb-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                       <div className="p-3 bg-slate-900/50 rounded-lg">
                         <p className="text-xs text-slate-500 mb-1">Total Income</p>
                         <p className="text-lg font-bold text-white">{formatCurrency(currentFYTaxData.totalReceivedINR)}</p>
+                      </div>
+                      <div className="p-3 bg-cyan-900/25 rounded-lg border border-cyan-500/20">
+                        <p className="text-xs text-cyan-400/80 mb-1">Post tax (col R)</p>
+                        <p className="text-lg font-bold text-cyan-200">
+                          {formatCurrency(currentFYTaxData.totalReceivedPostTax || 0)}
+                        </p>
                       </div>
                       <div className="p-3 bg-slate-900/50 rounded-lg">
                         <p className="text-xs text-slate-500 mb-1">Tax Liability</p>
@@ -719,6 +761,12 @@ export function OtherIncomeAnalytics() {
                             <span className="text-slate-300 font-medium">Previous FY {previousFYTax.fy}</span>
                           </div>
                           <div className="flex items-center gap-4 text-sm">
+                            <span className="text-slate-400">
+                              Post tax:{' '}
+                              <span className="text-cyan-300 font-medium">
+                                {formatCurrency(previousFYTax.totalReceivedPostTax || 0)}
+                              </span>
+                            </span>
                             <span className="text-slate-400">
                               Income: <span className="text-white font-medium">{formatCurrency(previousFYTax.totalReceivedINR)}</span>
                             </span>
