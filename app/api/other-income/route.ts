@@ -161,6 +161,74 @@ interface SheetTaxGrandTotals {
   paymentDue: number
 }
 
+/**
+ * Parses M→T money cells after the FY label (Google may omit empty column Q,
+ * which shifts R/S/T left — old logic read "Payment done" as post-tax).
+ */
+function parseTaxTableMoneyCells(
+  row: string[],
+  amountStart: number,
+  parseAmount: (val: string | undefined) => number
+): Omit<TaxSummary, 'fy'> | null {
+  const v = row.slice(amountStart)
+  const n = v.length
+  if (n < 4) return null
+
+  const totalReceivedUSD = parseAmount(v[0])
+  const totalReceivedINR = parseAmount(v[1])
+  const otherTaxes = parseAmount(v[2])
+  const totalTaxDue = parseAmount(v[3])
+
+  let totalReceivedPostTax: number
+  let paymentDone: number
+  let paymentDue: number
+
+  const gapRaw = v[4]?.toString().trim() ?? ''
+  const gapNum = parseAmount(v[4])
+  const fifth = parseAmount(v[5])
+  const sixth = parseAmount(v[6])
+  const seventh = parseAmount(v[7])
+
+  if (gapRaw === '' || gapNum === 0) {
+    // Column Q empty or zero → post-tax is v[5], paid v[6], due v[7]
+    totalReceivedPostTax = fifth
+    paymentDone = sixth
+    paymentDue = seventh
+  } else if (n <= 7) {
+    // No spacer in API: … tax, post-tax, paid, due
+    totalReceivedPostTax = gapNum
+    paymentDone = fifth
+    paymentDue = sixth
+  } else {
+    // n >= 8 and v[4] is non-empty: either Q has a value, or Q was omitted but the row is still wide
+    const inrVal = totalReceivedINR
+    const looksLikePostTax =
+      gapNum > 0 &&
+      gapNum <= inrVal * 1.05 &&
+      gapNum >= totalTaxDue * 0.5 &&
+      (fifth === 0 || fifth < gapNum)
+    if (looksLikePostTax) {
+      totalReceivedPostTax = gapNum
+      paymentDone = fifth
+      paymentDue = sixth
+    } else {
+      totalReceivedPostTax = fifth
+      paymentDone = sixth
+      paymentDue = seventh
+    }
+  }
+
+  return {
+    totalReceivedUSD,
+    totalReceivedINR,
+    otherTaxes,
+    totalTaxDue,
+    totalReceivedPostTax,
+    paymentDone,
+    paymentDue,
+  }
+}
+
 interface FYSummary {
   fy: string
   totalUSD: number
@@ -177,7 +245,7 @@ interface FYSummary {
 export async function GET(request: NextRequest) {
   try {
     // Check cache first
-    const cached = cache.get('other-income')
+    const cached = cache.get('other-income-v3')
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
       console.log('Returning cached other-income data')
       return NextResponse.json(cached.data)
@@ -293,36 +361,20 @@ export async function GET(request: NextRequest) {
       if (fyLower === 'total' || fyLower.includes('fy total')) {
         const labelIsInL =
           colL.toLowerCase() === 'total' || colL.toLowerCase().includes('total')
-        const start = labelIsInL ? 1 : colM.toLowerCase() === 'total' ? 2 : 1
-        sheetGrandTotals = {
-          totalReceivedUSD: parseAmount(row[start]),
-          totalReceivedINR: parseAmount(row[start + 1]),
-          otherTaxes: parseAmount(row[start + 2]),
-          totalTaxDue: parseAmount(row[start + 3]),
-          totalReceivedPostTax: parseAmount(row[start + 5]),
-          paymentDone: parseAmount(row[start + 6]),
-          paymentDue: parseAmount(row[start + 7]),
+        const amountStart = labelIsInL ? 1 : colM.toLowerCase() === 'total' ? 2 : 1
+        const parsed = parseTaxTableMoneyCells(row, amountStart, parseAmount)
+        if (parsed) {
+          sheetGrandTotals = parsed as SheetTaxGrandTotals
         }
         continue
       }
 
-      const usd = parseAmount(row[base + 1])
-      const inr = parseAmount(row[base + 2])
-      const otherTaxes = parseAmount(row[base + 3])
-      const taxDue = parseAmount(row[base + 4])
-      const postTax = base === 0 ? parseAmount(row[base + 6]) : 0
-      const paid = base === 0 ? parseAmount(row[base + 7]) : parseAmount(row[base + 5])
-      const due = base === 0 ? parseAmount(row[base + 8]) : parseAmount(row[base + 6])
+      const parsed = parseTaxTableMoneyCells(row, base + 1, parseAmount)
+      if (!parsed) continue
 
       taxSummaries.push({
         fy: fyRaw,
-        totalReceivedUSD: usd,
-        totalReceivedINR: inr,
-        otherTaxes,
-        totalTaxDue: taxDue,
-        totalReceivedPostTax: postTax,
-        paymentDone: paid,
-        paymentDue: due,
+        ...parsed,
       })
     }
 
@@ -556,7 +608,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Cache the result
-    cache.set('other-income', { data: result, timestamp: Date.now() })
+    cache.set('other-income-v3', { data: result, timestamp: Date.now() })
 
     return NextResponse.json(result)
 

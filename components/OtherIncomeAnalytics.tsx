@@ -359,27 +359,29 @@ export function OtherIncomeAnalytics() {
             </div>
             <div>
               <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Earnings overview</span>
-              <p className="text-[11px] text-slate-500 mt-0.5">Pre-tax from rows · Post-tax from rows · Real = FY sheet col R</p>
+              <p className="text-xs text-slate-500 mt-1 leading-snug">
+                Gross from line items, post-tax from each line, and received-after-tax from your FY summary table.
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="rounded-xl bg-slate-900/40 border border-slate-700/50 p-4">
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Total (pre-tax)</p>
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Gross (pre-tax)</p>
               <p className="text-2xl font-black text-white leading-tight">{formatCurrency(summary.totalEarningsINR)}</p>
-              <p className="text-xs text-emerald-400/90 mt-1">{formatCurrency(summary.totalEarningsUSD, 'USD')}</p>
+              <p className="text-xs text-emerald-400/90 mt-2">{formatCurrency(summary.totalEarningsUSD, 'USD')}</p>
             </div>
             <div className="rounded-xl bg-slate-900/40 border border-emerald-500/20 p-4">
-              <p className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wide mb-1">Post tax (entries)</p>
+              <p className="text-[10px] font-semibold text-emerald-500/80 uppercase tracking-wide mb-1">Post-tax (lines)</p>
               <p className="text-2xl font-black text-emerald-300 leading-tight">{formatCurrency(summary.totalEarningsINRPostTax)}</p>
-              <p className="text-[11px] text-slate-500 mt-1">Sum of &quot;Actual Post Tax&quot; per line</p>
+              <p className="text-xs text-slate-500 mt-2 leading-snug">Adds each row’s post-tax amount (detail tab).</p>
             </div>
             <div className="rounded-xl bg-slate-900/40 border border-cyan-500/25 p-4">
-              <p className="text-[10px] font-semibold text-cyan-400/90 uppercase tracking-wide mb-1">Real earnings</p>
+              <p className="text-[10px] font-semibold text-cyan-400/90 uppercase tracking-wide mb-1">Received after tax</p>
               <p className="text-2xl font-black text-cyan-200 leading-tight">{formatCurrency(summary.realEarningsINR ?? summary.totalEarningsINRPostTax)}</p>
-              <p className="text-[11px] text-slate-500 mt-1">
-                {taxes.sheetGrandTotals?.totalReceivedPostTax
-                  ? 'Total row · col R (received post tax)'
-                  : 'Per-FY col R or entry totals'}
+              <p className="text-xs text-slate-500 mt-2 leading-snug">
+                {taxes.sheetGrandTotals && taxes.sheetGrandTotals.totalReceivedPostTax > 0
+                  ? 'From your FY summary total (post-tax received).'
+                  : 'From FY summary rows, or matches lines if the table is empty.'}
               </p>
             </div>
           </div>
@@ -707,7 +709,7 @@ export function OtherIncomeAnalytics() {
                         <p className="text-lg font-bold text-white">{formatCurrency(currentFYTaxData.totalReceivedINR)}</p>
                       </div>
                       <div className="p-3 bg-cyan-900/25 rounded-lg border border-cyan-500/20">
-                        <p className="text-xs text-cyan-400/80 mb-1">Post tax (col R)</p>
+                        <p className="text-xs text-cyan-400/80 mb-1">Received after tax (summary)</p>
                         <p className="text-lg font-bold text-cyan-200">
                           {formatCurrency(currentFYTaxData.totalReceivedPostTax || 0)}
                         </p>
@@ -762,7 +764,7 @@ export function OtherIncomeAnalytics() {
                           </div>
                           <div className="flex items-center gap-4 text-sm">
                             <span className="text-slate-400">
-                              Post tax:{' '}
+                              After tax:{' '}
                               <span className="text-cyan-300 font-medium">
                                 {formatCurrency(previousFYTax.totalReceivedPostTax || 0)}
                               </span>
