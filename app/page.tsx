@@ -3,18 +3,21 @@
 import { useState, useEffect } from 'react'
 import { useSession, signIn, signOut } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion'
 import { Dashboard } from '@/components/Dashboard'
 import { EarningsBreakdown } from '@/components/EarningsBreakdown'
 import { MonthlyBudget } from '@/components/MonthlyBudget'
 import { Investments } from '@/components/Investments'
 import { OtherIncomeAnalytics } from '@/components/OtherIncomeAnalytics'
+import { ForecastPage } from '@/components/forecast/ForecastPage'
+import { HomeHub } from '@/components/HomeHub'
 import { LoginCard } from '@/components/LoginCard'
-import { DashboardSelector } from '@/components/DashboardSelector'
+import { DashboardSelector, DashboardId } from '@/components/DashboardSelector'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 
 export default function Home() {
   const { data: session, status } = useSession()
-  const [selectedDashboard, setSelectedDashboard] = useState<'networth' | 'earnings' | 'budget' | 'investments' | 'other-income'>('networth')
+  const [selectedDashboard, setSelectedDashboard] = useState<DashboardId>('home')
   const searchParams = useSearchParams()
   const [zerodhaMessage, setZerodhaMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -38,13 +41,13 @@ export default function Home() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0b0e14]">
         <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-blue-200 dark:border-blue-800 rounded-full animate-pulse"></div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full animate-spin"></div>
+          <div className="relative w-14 h-14">
+            <div className="absolute inset-0 rounded-full border-4 border-slate-200 dark:border-white/10" />
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin" />
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-medium animate-pulse">Loading your dashboard...</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">Loading your dashboard…</p>
         </div>
       </div>
     )
@@ -60,47 +63,62 @@ export default function Home() {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-300">
-        {/* Subtle background pattern */}
-        <div className="fixed inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5Qzk5QUUiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMS41Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-50 dark:opacity-20 pointer-events-none" />
-        
-        {/* Zerodha Connection Toast */}
+      <div className="relative min-h-screen bg-slate-50 dark:bg-[#0b0e14] transition-colors duration-300">
+        {/* Premium ambient glow */}
+        <div className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(60%_100%_at_50%_0%,rgba(99,102,241,0.10),transparent_70%)] dark:bg-[radial-gradient(60%_100%_at_50%_0%,rgba(99,102,241,0.14),transparent_70%)]" />
+
+        {/* Zerodha connection toast */}
         {zerodhaMessage && (
-          <div className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-xl shadow-lg transition-all duration-300 ${
-            zerodhaMessage.type === 'success' 
-              ? 'bg-green-500 text-white' 
-              : 'bg-red-500 text-white'
-          }`}>
+          <div
+            className={`fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg animate-scale-in ${
+              zerodhaMessage.type === 'success'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
+                : 'bg-red-500/10 text-red-700 dark:text-red-300 border border-red-500/30'
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${zerodhaMessage.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`} />
             {zerodhaMessage.text}
           </div>
         )}
         
-        <DashboardSelector 
-          selectedDashboard={selectedDashboard}
-          onDashboardChange={setSelectedDashboard}
-          session={session}
-          onSignOut={() => signOut()}
-        />
-        
-        <main className="relative pb-4 md:pb-8">
-          {selectedDashboard === 'networth' ? (
-            <Dashboard session={session} onSignOut={() => signOut()} />
-          ) : selectedDashboard === 'earnings' ? (
-            <EarningsBreakdown session={session} onSignOut={() => signOut()} />
-          ) : selectedDashboard === 'budget' ? (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <MonthlyBudget />
-            </div>
-          ) : selectedDashboard === 'investments' ? (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <Investments />
-            </div>
-          ) : (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <OtherIncomeAnalytics />
-            </div>
-          )}
-        </main>
+        <MotionConfig reducedMotion="user">
+          <DashboardSelector
+            selectedDashboard={selectedDashboard}
+            onDashboardChange={setSelectedDashboard}
+            session={session}
+            onSignOut={() => signOut()}
+          />
+
+          <main className="relative pb-4 md:pb-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedDashboard}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              >
+                {selectedDashboard === 'home' ? (
+                  <HomeHub session={session} onNavigate={setSelectedDashboard} />
+                ) : selectedDashboard === 'networth' ? (
+                  <Dashboard session={session} onSignOut={() => signOut()} onNavigateToForecast={() => setSelectedDashboard('forecast')} />
+                ) : selectedDashboard === 'earnings' ? (
+                  <EarningsBreakdown session={session} onSignOut={() => signOut()} />
+                ) : selectedDashboard === 'budget' ? (
+                  <MonthlyBudget />
+                ) : selectedDashboard === 'investments' ? (
+                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <Investments />
+                  </div>
+                ) : selectedDashboard === 'forecast' ? (
+                  <ForecastPage />
+                ) : (
+                  <OtherIncomeAnalytics />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </MotionConfig>
       </div>
     </ThemeProvider>
   )

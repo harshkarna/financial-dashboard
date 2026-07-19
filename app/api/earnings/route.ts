@@ -116,7 +116,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result)
 
-  } catch (error) {
+  } catch (error: any) {
+    const status = error?.code ?? error?.response?.status
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error fetching earnings data:', error)
     return NextResponse.json(
       { error: 'Failed to fetch earnings data' },

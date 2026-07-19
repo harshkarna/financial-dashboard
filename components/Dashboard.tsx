@@ -1,170 +1,105 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Session } from 'next-auth'
-import { NetWorthCard, NetWorthInsights } from './NetWorthCard'
+import { AlertCircle, RefreshCw, LineChart, ArrowRight } from 'lucide-react'
 import { MonthSelector } from './MonthSelector'
-import { AssetBreakdown } from './AssetBreakdown'
-import { TrendChart } from './TrendChart'
-import { GrowthComparison } from './GrowthComparison'
-import { RefreshCw, AlertCircle, LayoutDashboard } from 'lucide-react'
+import { NetWorthHero } from './networth/NetWorthHero'
+import { NetWorthChart } from './networth/NetWorthChart'
+import { AssetsLiabilities } from './networth/AssetsLiabilities'
+import { NetWorthInsights } from './networth/NetWorthInsights'
+import { InvestmentGains } from './networth/InvestmentGains'
+import { CompositionTrend } from './networth/CompositionTrend'
+import { MilestoneToast } from './networth/MilestoneToast'
+import { RangeKey } from './networth/range'
+import { PrivacyProvider } from '@/contexts/PrivacyContext'
+import { ComparisonResponse, MonthData, computeGains, toHistory } from '@/lib/netWorth'
 
 interface DashboardProps {
   session: Session
   onSignOut: () => void
+  onNavigateToForecast?: () => void
 }
 
-interface NetWorthData {
-  netWorth: number
-  assets: Array<{
-    category: string
-    type: string
-    item: string
-    amount: number
-  }>
-  liabilities: Array<{
-    category: string
-    type: string
-    item: string
-    amount: number
-  }>
-}
-
-export function Dashboard({ session, onSignOut }: DashboardProps) {
+export function Dashboard({ session, onNavigateToForecast }: DashboardProps) {
+  const [payload, setPayload] = useState<ComparisonResponse | null>(null)
   const [selectedMonth, setSelectedMonth] = useState('')
-  const [data, setData] = useState<NetWorthData | null>(null)
-  const [months, setMonths] = useState<string[]>([])
+  const [range, setRange] = useState<RangeKey>('6M')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    fetchMonths()
-  }, [])
-
-  useEffect(() => {
-    if (selectedMonth) {
-      fetchData(selectedMonth)
-    }
-  }, [selectedMonth])
-
-  const sheetHeaderToDisplay = (header: string) => {
-    const trimmed = header?.toString().trim()
-    if (!trimmed) return ''
-    if (trimmed.includes('-')) {
-      const [monthName, year] = trimmed.split('-')
-      const fullYear = year.length === 2 ? `20${year}` : year
-      if (monthName === 'July') return `Jul ${fullYear}`
-      return `${monthName} ${fullYear}`
-    }
-    return trimmed
-  }
-
-  const fetchMonths = async () => {
-    try {
-      const response = await fetch('/api/months')
-      if (!response.ok) {
-        if (response.status === 401) {
-          setError('Your Google session expired. Sign out and sign in again to reload the sheet.')
-        } else {
-          setError('Could not load month list from the sheet. Try again or check your connection.')
-        }
-        setLoading(false)
-        return
-      }
-
-      const result = await response.json()
-      const list: string[] = Array.isArray(result.months) ? result.months : []
-
-      if (list.length > 0) {
-        setMonths(list)
-        setSelectedMonth(list[0])
-        return
-      }
-
-      // Months list empty (e.g. header format mismatch) — still load latest column from sheets API
-      const sheetsRes = await fetch('/api/sheets')
-      if (sheetsRes.ok) {
-        const sheetData = await sheetsRes.json()
-        const label = sheetHeaderToDisplay(sheetData.selectedMonth || '')
-        if (label) {
-          setMonths([label])
-          setSelectedMonth(label)
-          // Keep loading until fetchData(selectedMonth) runs from useEffect
-          return
-        }
-        setError('No month columns found on the Net Worth tab. Add dated columns after the Item column.')
-      } else if (sheetsRes.status === 401) {
-        setError('Your Google session expired. Sign out and sign in again.')
-      } else {
-        setError('No months detected and latest sheet data could not be loaded.')
-      }
-      setLoading(false)
-    } catch (err) {
-      console.error('Error fetching months:', err)
-      const fallbackMonths = ['Sep 2025', 'Aug 2025', 'Jul 2025', 'Jun 2025', 'May 2025', 'Apr 2025']
-      setMonths(fallbackMonths)
-      setSelectedMonth(fallbackMonths[0])
-    }
-  }
-
-  const fetchData = async (month: string) => {
+  const load = async () => {
     try {
       setLoading(true)
       setError(null)
-      
-      const response = await fetch(`/api/sheets?month=${encodeURIComponent(month)}`)
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch data')
+      const res = await fetch('/api/comparison')
+      if (!res.ok) {
+        setError(
+          res.status === 401
+            ? 'Your Google session expired. Sign out and sign in again to reload the sheet.'
+            : 'Could not load your net worth data. Please try again.',
+        )
+        return
       }
-      
-      const result = await response.json()
-      setData(result)
+      const data: ComparisonResponse = await res.json()
+      if (!data.months || data.months.length === 0) {
+        setError('No net worth data found. Add dated month columns to the "Net Worth" sheet.')
+        return
+      }
+      setPayload(data)
+      setSelectedMonth((prev) => (prev && data.months.some((m) => m.month === prev) ? prev : data.months[0].month))
     } catch (err) {
-      setError('Failed to load data. Please try again.')
-      console.error('Error fetching data:', err)
+      console.error('Error fetching net worth data:', err)
+      setError('Failed to load data. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        <div className="space-y-6">
-          <div className="h-12 bg-slate-700/50 rounded-2xl w-64 animate-pulse" />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <div className="h-64 bg-slate-700/50 rounded-2xl animate-pulse" />
-            <div className="h-64 bg-slate-700/50 rounded-2xl animate-pulse" />
-          </div>
-          
-          <div className="h-80 bg-slate-700/50 rounded-2xl animate-pulse" />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <div className="h-64 bg-slate-700/50 rounded-2xl animate-pulse" />
-            <div className="h-64 bg-slate-700/50 rounded-2xl animate-pulse" />
-          </div>
-        </div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const months = useMemo(() => payload?.months.map((m) => m.month) ?? [], [payload])
+  const history = useMemo(() => (payload ? toHistory(payload.months) : []), [payload])
+  const selectedIdx = useMemo(
+    () => payload?.months.findIndex((m) => m.month === selectedMonth) ?? -1,
+    [payload, selectedMonth],
+  )
+  const selected: MonthData | undefined = useMemo(
+    () => (selectedIdx >= 0 ? payload?.months[selectedIdx] : payload?.months[0]),
+    [payload, selectedIdx],
+  )
+  // Older month sits at the next higher index (list is most-recent-first).
+  const prevAssets = useMemo(() => {
+    if (!payload) return null
+    const idx = selectedIdx >= 0 ? selectedIdx : 0
+    return payload.months[idx + 1]?.assets ?? null
+  }, [payload, selectedIdx])
+  const netWorth = selected?.netWorth ?? 0
+  const gains = useMemo(
+    () => (selected ? computeGains(selected.assets, selected.costBasis) : null),
+    [selected],
+  )
+
+  if (loading) return <DashboardSkeleton />
 
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-center bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700/50 p-8">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+        <div className="nw-card flex flex-col items-center justify-center min-h-[400px] text-center p-8">
+          <div className="grid place-items-center w-14 h-14 rounded-full bg-red-500/10 mb-4">
+            <AlertCircle className="w-7 h-7 nw-loss" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">Something went wrong</h3>
-          <p className="text-slate-400 mb-6 max-w-md">{error}</p>
-          <button 
-            onClick={() => fetchData(selectedMonth)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/40 transform hover:scale-105 transition-all duration-200"
+          <h3 className="text-lg font-semibold nw-text-primary mb-2">Something went wrong</h3>
+          <p className="nw-text-secondary mb-6 max-w-md">{error}</p>
+          <button
+            onClick={load}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
-            Try Again
+            Try again
           </button>
         </div>
       </div>
@@ -172,73 +107,97 @@ export function Dashboard({ session, onSignOut }: DashboardProps) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30">
-                <LayoutDashboard className="h-5 w-5 md:h-6 md:w-6 text-white" />
+    <PrivacyProvider>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+        <div className="space-y-5">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-bold nw-text-primary tracking-tight">Net Worth</h1>
+                {onNavigateToForecast && (
+                  <button
+                    onClick={onNavigateToForecast}
+                    className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 transition-colors"
+                    title="Project your future net worth"
+                  >
+                    <LineChart className="w-4 h-4" />
+                    Forecast
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                )}
               </div>
-              Net Worth Dashboard
-            </h1>
-            <p className="text-sm text-slate-400 mt-1 ml-[52px] md:ml-[60px]">
-              Track your financial position
-            </p>
+              <p className="text-sm nw-text-secondary mt-1">Your complete financial position, month by month.</p>
+            </div>
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 hide-scrollbar">
+              <MonthSelector months={months} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+            </div>
           </div>
-        </div>
 
-        {/* Month Selector */}
-        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 hide-scrollbar">
-          <MonthSelector
-            months={months}
-            selectedMonth={selectedMonth}
-            onMonthChange={setSelectedMonth}
-          />
-        </div>
-        
-        {/* Net Worth Card + Insights - Side by side with equal heights */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            <NetWorthCard 
-              netWorth={data?.netWorth || 0}
-              month={selectedMonth}
+          {/* Hero + Trend */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+            <div className="lg:col-span-2 nw-rise">
+              <NetWorthHero netWorth={netWorth} selectedMonth={selectedMonth} history={history} range={range} />
+            </div>
+            <div className="lg:col-span-3 nw-rise" style={{ animationDelay: '60ms' }}>
+              <NetWorthChart
+                history={history}
+                range={range}
+                onRangeChange={setRange}
+                selectedMonth={selectedMonth}
+                onRetry={load}
+              />
+            </div>
+          </div>
+
+          {/* Insights */}
+          <div className="nw-rise" style={{ animationDelay: '120ms' }}>
+            <NetWorthInsights
+              history={history}
+              mom={payload?.comparisons.mom ?? null}
+              assets={selected?.assets ?? []}
+              netWorth={netWorth}
             />
           </div>
-          
-          <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            <NetWorthInsights netWorth={data?.netWorth || 0} />
-          </div>
-        </div>
 
-        {/* Trend Chart - Full width */}
-        <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-          <TrendChart currentMonth={selectedMonth} />
-        </div>
-
-        {/* Growth Comparison - Full width */}
-        <div className="animate-slide-up" style={{ animationDelay: '0.35s' }}>
-          <GrowthComparison />
-        </div>
-        
-        {/* Assets and Liabilities - Side by side on desktop */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-          <div className="animate-slide-up" style={{ animationDelay: '0.4s' }}>
-            <AssetBreakdown 
-              title="Assets" 
-              items={data?.assets || []} 
-              type="positive"
-            />
+          {/* Investment returns + composition trend */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+            <div className="lg:col-span-2 nw-rise" style={{ animationDelay: '160ms' }}>
+              {gains && <InvestmentGains gains={gains} />}
+            </div>
+            <div className="lg:col-span-3 nw-rise" style={{ animationDelay: '200ms' }}>
+              {payload && <CompositionTrend months={payload.months} range={range} selectedMonth={selectedMonth} />}
+            </div>
           </div>
-          <div className="animate-slide-up" style={{ animationDelay: '0.5s' }}>
-            <AssetBreakdown 
-              title="Liabilities" 
-              items={data?.liabilities || []} 
-              type="negative"
+
+          {/* Assets & Liabilities */}
+          <div className="nw-rise" style={{ animationDelay: '240ms' }}>
+            <AssetsLiabilities
+              assets={selected?.assets ?? []}
+              liabilities={selected?.liabilities ?? []}
+              prevAssets={prevAssets}
+              netWorth={netWorth}
             />
           </div>
         </div>
+
+        <MilestoneToast netWorth={netWorth} />
+      </div>
+    </PrivacyProvider>
+  )
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+      <div className="space-y-5">
+        <div className="h-9 w-48 rounded-lg bg-slate-200/80 dark:bg-white/[0.08] animate-pulse" />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+          <div className="lg:col-span-2 h-56 rounded-2xl bg-slate-200/80 dark:bg-white/[0.08] animate-pulse" />
+          <div className="lg:col-span-3 h-56 rounded-2xl bg-slate-200/80 dark:bg-white/[0.08] animate-pulse" />
+        </div>
+        <div className="h-28 rounded-2xl bg-slate-200/80 dark:bg-white/[0.08] animate-pulse" />
+        <div className="h-64 rounded-2xl bg-slate-200/80 dark:bg-white/[0.08] animate-pulse" />
       </div>
     </div>
   )

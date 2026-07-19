@@ -274,6 +274,14 @@
   animation: scale-in 0.3s ease-out forwards;
 }
 
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
 .animate-blob {
   animation: blob 7s infinite;
 }
@@ -682,5 +690,108 @@
   .celebration-trophy svg {
     width: 32px;
     height: 32px;
+  }
+}
+
+/* ========================================
+   NET WORTH DESIGN SYSTEM (v2)
+   Calm, trustworthy surfaces that work in both
+   light and dark. Reusable across the product.
+   ======================================== */
+
+@layer components {
+  /* Primary surface: flat card, 1px hairline, whisper-quiet shadow. */
+  .nw-card {
+    @apply rounded-2xl border transition-colors duration-200;
+    background-color: #ffffff;
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.03);
+  }
+  .dark .nw-card {
+    background-color: #151a23;
+    border-color: rgba(148, 163, 184, 0.10);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  /* Nested / inset surface inside a card. */
+  .nw-inset {
+    @apply rounded-xl border;
+    background-color: #f8fafc;
+    border-color: rgba(15, 23, 42, 0.06);
+  }
+  .dark .nw-inset {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: rgba(148, 163, 184, 0.08);
+  }
+
+  .nw-hairline {
+    border-color: rgba(15, 23, 42, 0.08);
+  }
+  .dark .nw-hairline {
+    border-color: rgba(148, 163, 184, 0.10);
+  }
+
+  /* Interactive control (range pills, toggles). */
+  .nw-control {
+    @apply rounded-lg text-sm font-medium transition-colors duration-150;
+    color: #475569;
+  }
+  .nw-control:hover {
+    background-color: rgba(15, 23, 42, 0.04);
+  }
+  .dark .nw-control {
+    color: #94a3b8;
+  }
+  .dark .nw-control:hover {
+    background-color: rgba(148, 163, 184, 0.08);
+  }
+  .nw-control[data-active='true'] {
+    background-color: #eef2ff;
+    color: #4338ca;
+  }
+  .dark .nw-control[data-active='true'] {
+    background-color: rgba(99, 102, 241, 0.16);
+    color: #a5b4fc;
+  }
+
+  /* Tabular numerals so digits don't jitter during count-up. */
+  .tabnums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+/* Text tokens (semantic, theme-aware) */
+.nw-text-primary { color: #0f172a; }
+.dark .nw-text-primary { color: #e6eaf0; }
+.nw-text-secondary { color: #64748b; }
+.dark .nw-text-secondary { color: #94a3b8; }
+.nw-text-muted { color: #94a3b8; }
+.dark .nw-text-muted { color: #64748b; }
+
+/* Movement colors (the ONLY place we lean on green/red) */
+.nw-gain { color: #16a34a; }
+.dark .nw-gain { color: #22c55e; }
+.nw-loss { color: #dc2626; }
+.dark .nw-loss { color: #f87171; }
+
+/* Gentle entrance for cards. Disabled under reduced-motion (see below). */
+@keyframes nw-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.nw-rise {
+  animation: nw-rise 0.4s ease-out both;
+}
+
+/* Accessibility: honor the user's reduced-motion preference globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

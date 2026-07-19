@@ -66,19 +66,13 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
-      // In development, be very lenient with token expiration
-      if (isDevelopment) {
-        // For development, only refresh if token is really old (more than 12 hours)
-        const twelveHoursAgo = Date.now() - (12 * 60 * 60 * 1000)
-        if (token.expiresAt && ((token.expiresAt as number) * 1000) > twelveHoursAgo) {
-          return token
-        }
-      } else {
-        // Production: Return previous token if the access token has not expired yet
-        // Add buffer time to prevent edge cases
-        if (token.expiresAt && Date.now() < ((token.expiresAt as number) * 1000) - 60000) {
-          return token
-        }
+      // Return the existing token while the access token is still valid
+      // (with a 60s safety buffer). This applies to both dev and prod.
+      // NOTE: the previous "lenient in dev" branch skipped refresh for ~12h
+      // and kept serving expired access tokens — which surfaced as slow 500s
+      // from the Google Sheets API (401 Invalid Credentials) and blank pages.
+      if (token.expiresAt && Date.now() < ((token.expiresAt as number) * 1000) - 60000) {
+        return token
       }
 
       // Access token has expired or about to expire, try to refresh it
@@ -101,16 +95,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!response.ok) {
             console.error('Failed to refresh token:', tokens)
-            // In development, be more lenient with token refresh failures
-            if (isDevelopment) {
-              console.log('Development mode: Continuing with existing token despite refresh failure')
-              return {
-                ...token,
-                error: undefined, // Clear any previous errors
-              }
-            } else {
-              throw tokens
-            }
+            throw tokens
           }
 
           console.log('Token refreshed successfully')

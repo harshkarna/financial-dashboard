@@ -37,6 +37,10 @@ interface MonthData {
   totalAssets: number
   totalLiabilities: number
   assetsByType: Record<string, number>
+  // Cost-basis (invested) amounts for items tracked at market value elsewhere,
+  // e.g. { 'Invested Mutual Funds': 4885955, 'Invested Stock': 5328567 }.
+  // Kept separate so they never affect net worth / totals.
+  costBasis: Record<string, number>
 }
 
 export async function GET(request: NextRequest) {
@@ -112,6 +116,7 @@ export async function GET(request: NextRequest) {
       const liabilities: AssetData[] = []
       let netWorthValue = 0
       const assetsByType: Record<string, number> = {}
+      const costBasis: Record<string, number> = {}
 
       for (const row of dataRows) {
         const category = row[0]?.toString().trim()
@@ -136,6 +141,9 @@ export async function GET(request: NextRequest) {
             // Group by type (only non-excluded items)
             const typeKey = type || 'Other'
             assetsByType[typeKey] = (assetsByType[typeKey] || 0) + value
+          } else if (item) {
+            // Track cost basis separately (does not affect totals / net worth)
+            costBasis[item] = value
           }
         } else if (category.toLowerCase() === 'liabilities') {
           liabilities.push({ category, type: type || 'Unknown', item: item || 'Unknown', amount: value })
@@ -152,7 +160,8 @@ export async function GET(request: NextRequest) {
         liabilities,
         totalAssets,
         totalLiabilities,
-        assetsByType
+        assetsByType,
+        costBasis
       })
     }
 
@@ -176,7 +185,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result)
 
-  } catch (error) {
+  } catch (error: any) {
+    const status = error?.code ?? error?.response?.status
+    if (status === 401 || status === 403) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error fetching comparison data:', error)
     return NextResponse.json(
       { error: 'Failed to fetch comparison data' },
